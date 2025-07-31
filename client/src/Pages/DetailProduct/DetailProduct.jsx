@@ -64,10 +64,10 @@ function DetailProduct() {
         };
         try {
             await requestAddToCart(data);
-            fetchCart();
+            await fetchCart();
             message.success('Thêm vào giỏ hàng thành công');
         } catch (error) {
-            message.error(error.response.data.message);
+            message.error(error.response?.data?.message || 'Có lỗi xảy ra khi thêm vào giỏ hàng');
         }
     };
 
@@ -80,10 +80,10 @@ function DetailProduct() {
         };
         try {
             await requestAddToCart(data);
-            fetchCart();
+            await fetchCart();
             navigate('/cart');
         } catch (error) {
-            message.error(error.response.data.message);
+            message.error(error.response?.data?.message || 'Có lỗi xảy ra khi thêm vào giỏ hàng');
         }
     };
 

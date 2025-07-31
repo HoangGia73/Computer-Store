@@ -35,8 +35,18 @@ export function Provider({ children }) {
     };
 
     const fetchCart = async () => {
-        const res = await requestGetCart();
-        setDataCart(res.metadata);
+        try {
+            const token = cookies.get('logged');
+            if (!token) {
+                setDataCart([]);
+                return;
+            }
+            const res = await requestGetCart();
+            setDataCart(res.metadata || []);
+        } catch (error) {
+            console.error('Error fetching cart:', error);
+            setDataCart([]);
+        }
     };
 
     useEffect(() => {
