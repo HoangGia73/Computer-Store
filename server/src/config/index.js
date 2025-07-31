@@ -1,7 +1,7 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const connect = new Sequelize('computer', 'root', 'giaiu123', {
+const connect = new Sequelize('computer', 'root', '123123tem', {
     host: 'localhost',
     dialect: 'mysql',
     port: process.env.MYSQL_PORT,

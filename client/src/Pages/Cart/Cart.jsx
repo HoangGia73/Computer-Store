@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind';
 import styles from './Cart.module.scss';
 import Header from '../../Components/Header/Header';
-import { Card, Table, Input, Form, Button, Checkbox, Space, message } from 'antd';
+import { Card, Table, Input, Form, Button, Checkbox, Space, message, InputNumber } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -18,14 +18,20 @@ const cx = classNames.bind(styles);
 
 function Cart() {
     const [checkBox, setCheckBox] = useState(false);
+    const [localCartData, setLocalCartData] = useState([]);
 
     const { fetchCart, dataCart, dataUser } = useStore();
 
     const navigate = useNavigate();
 
-    const totalPrice = useMemo(() => {
-        return dataCart.reduce((total, item) => total + item.totalPrice, 0);
+    // Sync local cart data with global cart data
+    useEffect(() => {
+        setLocalCartData(dataCart);
     }, [dataCart]);
+
+    const totalPrice = useMemo(() => {
+        return localCartData.reduce((total, item) => total + item.totalPrice, 0);
+    }, [localCartData]);
 
     const handleDeleteCart = async (id) => {
         try {
@@ -40,21 +46,47 @@ function Cart() {
         }
     };
 
-    const handleChangeQuantity = async (record, e) => {
+    const handleChangeQuantity = async (record, newQuantity) => {
         try {
-            const data = {
-                productId: record.product.id,
-                quantity: Number(e.target.value),
-            };
-            if (Number(e.target.value) > record.product.stock) {
-                message.error('Số lượng sản phẩm không được vượt quá số lượng có trong kho');
-                e.target.value = record.product.stock;
+            if (newQuantity <= 0) {
+                message.error('Số lượng phải lớn hơn 0');
                 return;
             }
+
+            if (newQuantity > record.product.stock) {
+                message.error('Số lượng sản phẩm không được vượt quá số lượng có trong kho');
+                return;
+            }
+
+            // Update local state immediately for instant UI feedback
+            const updatedLocalData = localCartData.map((item) => {
+                if (item.id === record.id) {
+                    const finalPrice =
+                        !record.product.isComponent && record.product.discount > 0
+                            ? record.product.price * (1 - record.product.discount / 100)
+                            : record.product.price;
+                    return {
+                        ...item,
+                        quantity: newQuantity,
+                        totalPrice: finalPrice * newQuantity,
+                    };
+                }
+                return item;
+            });
+            setLocalCartData(updatedLocalData);
+
+            const data = {
+                productId: record.product.id,
+                quantity: newQuantity,
+            };
+
             await requestUpdateQuantityCart(data);
-            await fetchData();
+            // Cập nhật lại dữ liệu giỏ hàng từ server
+            await fetchCart();
         } catch (error) {
-            message.error(error.response.data.message);
+            message.error(error.response?.data?.message || 'Có lỗi xảy ra');
+            // Reset local data to server data if error occurs
+            setLocalCartData(dataCart);
         }
     };
 
@@ -85,13 +117,13 @@ function Cart() {
             dataIndex: 'quantity',
             key: 'quantity',
             render: (quantity, record) => (
-                <Input
-                    onChange={(e) => handleChangeQuantity(record, e)}
-                    type="number"
-                    defaultValue={quantity}
-                    style={{ width: 60 }}
+                <InputNumber
+                    value={localCartData.find((item) => item.id === record.id)?.quantity || quantity}
+                    onChange={(value) => handleChangeQuantity(record, value)}
+                    style={{ width: 80 }}
                     min={1}
                     max={record.product.stock}
+                    precision={0}
                 />
             ),
         },
@@ -99,7 +131,11 @@ function Cart() {
             title: 'Thành tiền',
             dataIndex: 'totalPrice',
             key: 'total',
-            render: (totalPrice) => `${totalPrice?.toLocaleString()} đ`,
+            render: (totalPrice, record) => {
+                const currentItem = localCartData.find((item) => item.id === record.id);
+                const displayPrice = currentItem ? currentItem.totalPrice : totalPrice;
+                return `${displayPrice?.toLocaleString()} đ`;
+            },
         },
         {
             title: 'Hành động',
@@ -185,8 +221,8 @@ function Cart() {
 
             <main className={cx('main')}>
                 <div className={cx('container')}>
-                    <Table dataSource={dataCart} columns={columns} pagination={false} />
-                    {dataCart.length > 0 && (
+                    <Table dataSource={localCartData} columns={columns} pagination={false} />
+                    {localCartData.length > 0 && (
                         <div className={cx('checkout-section')}>
                             <Card title="THÔNG TIN NGƯỜI MUA" style={{ marginBottom: 16 }}>
                                 <Form layout="vertical">

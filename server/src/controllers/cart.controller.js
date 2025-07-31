@@ -212,22 +212,46 @@ class controllerCart {
         const { id } = req.user;
         const { productId, quantity } = req.body;
 
-        // Lấy thông tin sản phẩm
-        const product = await modelProduct.findOne({ where: { id: productId } });
+        if (!id || !productId || !quantity) {
+            throw new BadRequestError('Missing required fields');
+        }
+
+        // Lấy thông tin sản phẩm từ bảng products hoặc productComponent
+        let product = await modelProduct.findOne({ where: { id: productId } });
+        let isComponent = false;
+
+        if (!product) {
+            product = await modelProductComponent.findOne({ where: { id: productId } });
+            isComponent = true;
+        }
 
         if (!product) {
             throw new BadRequestError('Không tìm thấy sản phẩm');
         }
 
+        // Kiểm tra số lượng có vượt quá stock không
+        if (product.stock < quantity) {
+            throw new BadRequestError('Số lượng trong kho không đủ');
+        }
+
         // Tính giá sau khi áp dụng discount (nếu có)
-        const finalPrice = product.discount > 0 ? product.price * (1 - product.discount / 100) : product.price;
+        let finalPrice = 0;
+        if (!isComponent) {
+            finalPrice = product.discount > 0 ? product.price * (1 - product.discount / 100) : product.price;
+        } else {
+            finalPrice = product.price;
+        }
 
         // Tính tổng tiền
         const totalPrice = finalPrice * quantity;
 
         // Cập nhật giỏ hàng
         await modelCart.update({ quantity, totalPrice }, { where: { userId: id, productId } });
-        new OK({ message: 'Cập nhật số lượng thành công' }).send(res);
+
+        new OK({
+            message: 'Cập nhật số lượng thành công',
+            metadata: { quantity, totalPrice, finalPrice },
+        }).send(res);
     }
 
     async getCartBuildPc(req, res) {
