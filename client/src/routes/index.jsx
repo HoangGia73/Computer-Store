@@ -14,6 +14,8 @@ import DetailBlogs from '../Pages/DetailBlogs/DetailBlogs';
 import Contact from '../Pages/Contact/Contact';
 import Blogs from '../Pages/Blogs/Blogs';
 import SearchProduct from '../Pages/SearchProduct/SearchProduct';
+import PCMAbout from '../Pages/About/PCMAbout/PCMAbout';
+import Address from '../Pages/About/Address/Address';
 export const publicRoutes = [
     { path: '/', component: <App /> },
     { path: '/admin', component: <Admin /> },
@@ -33,4 +35,6 @@ export const publicRoutes = [
     { path: '/category', component: <Category /> },
     { path: '/blogs', component: <Blogs /> },
     { path: '/search/:category/:nameProduct', component: <SearchProduct /> },
+    { path: '/about', component: <PCMAbout /> },
+    { path: '/address', component: <Address /> },
 ];

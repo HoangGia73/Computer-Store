@@ -16,14 +16,20 @@ function LoginUser() {
     const onFinish = async (values) => {
         try {
             await requestLogin(values);
+            message.success('Đăng nhập thành công!');
             setTimeout(() => {
                 window.location.reload();
-            }, 2000);
+            }, 1000);
             navigate('/');
-            message.success('Đăng nhập thành công!');
         } catch (error) {
-            console.log(error);
-            message.error(error.response.data.message);
+            console.log('Login error:', error);
+            if (error.response && error.response.data && error.response.data.message) {
+                message.error(error.response.data.message);
+            } else if (error.response && error.response.data && error.response.data.error) {
+                message.error(error.response.data.error);
+            } else {
+                message.error('Đăng nhập thất bại. Vui lòng thử lại!');
+            }
         }
     };
 
@@ -67,7 +73,7 @@ function LoginUser() {
                         ]}
                     >
                         <Input prefix={<UserOutlined />} placeholder="Email" size="large" />
-                    </Form.Item>
+</Form.Item>
 
                     <Form.Item
                         name="password"

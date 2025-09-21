@@ -1,0 +1,180 @@
+.wrapper {
+  background: #f3f3f4;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 16px;
+  flex: 1 0 auto;
+}
+
+/* breadcrumb */
+.breadcrumb {
+  color: #8a8a8a;
+  font-size: 14px;
+  margin: 6px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .sep { color: #b3b3b3; }
+  .current { color: #6c6c6c; }
+}
+
+/* card chứa grid */
+.card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 992px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* map */
+.mapWrap {
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.map {
+  width: 100%;
+  height: 470px;
+  border: 0;
+  display: block;
+
+  @media (max-width: 576px) {
+    height: 320px;
+  }
+}
+
+/* form */
+.note {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.form { width: 100%; }
+
+.formGroup {
+  margin-bottom: 14px;
+
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+
+    span { color: #d93025; }
+  }
+
+  input, textarea {
+    width: 100%;
+    border: 1px solid #dcdcdc;
+    border-radius: 6px;
+    padding: 10px 12px;
+    outline: none;
+    background: #fff;
+    transition: border-color .15s ease;
+
+    &:focus {
+      border-color: #5b7bd5;
+      box-shadow: 0 0 0 3px rgba(91,123,213,.12);
+    }
+  }
+
+  textarea { resize: vertical; }
+}
+
+.hasError {
+  input, textarea {
+    border-color: #e53935;
+  }
+}
+
+.errorMsg {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #e53935;
+}
+
+.submit {
+  width: 100%;
+  background: #394f97;
+  color: #fff;
+  border: none;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled { opacity: .7; cursor: not-allowed; }
+  &:hover:not(:disabled) { filter: brightness(1.05); }
+}
+.benefitsWrapper {
+  display: flex;
+  justify-content: center;
+  
+  padding: 30px 0;
+}
+
+.benefits {
+  display: flex;
+  justify-content: space-between; /* 👈 trải đều */
+  align-items: stretch;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  gap: 20px; /* khoảng cách giữa các ô */
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  h5 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #2b2b2b;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13.5px;
+    color: #666;
+  }
+}
+
+.icon {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: 12px;
+  background: #f3f6ff;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e6ecff;
+
+  svg {
+    width: 24px;
+    height: 24px;
+    fill: #3b57c7; /* xanh tím nhạt cho đồng bộ nút Submit */
+  }
+}

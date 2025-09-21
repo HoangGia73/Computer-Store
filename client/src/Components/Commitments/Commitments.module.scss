@@ -1,0 +1,49 @@
+.commitWrap {
+  background: #fff;
+  padding: 40px 0;
+  border-top: 1px solid #eee;
+}
+.commitInner {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.commitHeader {
+  text-align: center;
+  margin-bottom: 20px;
+  img { width: 86px; height: 86px; object-fit: contain; margin-bottom: 8px; }
+  h3 {
+    margin: 0; font-size: 22px; line-height: 1.4; color: #333;
+    span { color: #1b75d0; font-weight: 700; }
+    strong { display: inline-block; margin-top: 4px; font-size: 28px; color: #1b75d0; }
+  }
+}
+.accordion { display: flex; flex-direction: column; gap: 12px; }
+
+/* vì AccordionItem dùng class thường, style bằng :global để module vẫn apply */
+:global {
+  .accordionItem {
+    background: #fff; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.06);
+    border: 1px solid #ededed; overflow: hidden; transition: border-color .2s, box-shadow .2s;
+    &.open { border-color: #cfd9ff; box-shadow: 0 4px 12px rgba(27,117,208,.08); }
+  }
+  .accordionHeader {
+    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    cursor: pointer; background: linear-gradient(#ffffff,#fdfdfd);
+    .title { font-weight: 600; color: #2c2c2c; font-size: 16px; }
+    .toggle {
+      width: 30px; height: 30px; border-radius: 6px; display: grid; place-items: center;
+      font-weight: 800; font-size: 18px; color: #2347a6; border: 1px solid #dfe6ff; background: #f3f6ff;
+      user-select: none; flex-shrink: 0;
+    }
+  }
+  .accordionBody {
+    padding: 16px 18px; border-top: 1px solid #eee; background: #fff; color: #333; line-height: 1.8;
+    p { margin: 0 0 10px; } a { color: #1b75d0; text-decoration: none; }
+  }
+}
+@media (max-width: 768px) {
+  .commitHeader h3 { font-size: 20px; }
+  .commitHeader h3 strong { font-size: 24px; }
+  :global { .accordionHeader .title { font-size: 15px; } }
+}

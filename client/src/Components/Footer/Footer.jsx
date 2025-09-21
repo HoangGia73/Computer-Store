@@ -64,13 +64,13 @@ function Footer() {
                         <h3 className={cx('section-title')}>GIỚI THIỆU PC MARKET</h3>
                         <ul className={cx('section-links')}>
                             <li>
-                                <a href="#">Giới thiệu công ty</a>
+                                <a href="/about">Giới thiệu công ty</a>
                             </li>
                             <li>
-                                <a href="#">Thông tin liên hệ</a>
+                                <a href="/address">Thông tin liên hệ</a>
                             </li>
                             <li>
-                                <a href="#">Tin tức</a>
+                                <a href="/blogs">Tin tức</a>
                             </li>
                         </ul>
                     </div>
