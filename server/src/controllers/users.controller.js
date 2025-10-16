@@ -5,6 +5,7 @@ const modelPayment = require('../models/payments.model');
 const modelUserWatch = require('../models/userWatchProduct.model');
 const modelOtp = require('../models/otp.model');
 const modelCategory = require('../models/category.model');
+const { USER_ROLES } = require('../constants/userRoles');
 
 const { Op, Sequelize } = require('sequelize');
 
@@ -534,7 +535,13 @@ class controllerUser {
         if (!findUser) {
             throw new BadUserRequestError('Người dùng không tồn tại');
         }
-        findUser.isAdmin = role;
+        const normalizedRole = String(role);
+
+        if (!Object.values(USER_ROLES).includes(normalizedRole)) {
+            throw new BadUserRequestError('Vai trò không hợp lệ');
+        }
+
+        findUser.isAdmin = normalizedRole;
         await findUser.save();
         new OK({ message: 'Cập nhật quyền người dùng thành công' }).send(res);
     }
