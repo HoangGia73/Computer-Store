@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { connect } = require('../config/index');
+const { USER_ROLES } = require('../constants/userRoles');
 
 const User = connect.define(
     'users',
@@ -32,7 +33,10 @@ const User = connect.define(
         isAdmin: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: '0',
+            defaultValue: USER_ROLES.CUSTOMER,
+            validate: {
+                isIn: [Object.values(USER_ROLES)],
+            },
         },
         typeLogin: {
             type: DataTypes.ENUM('google', 'email'),

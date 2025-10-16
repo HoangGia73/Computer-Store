@@ -1,6 +1,7 @@
 const { BadUserRequestError, BadUser2RequestError } = require('../core/error.response');
 const { verifyToken } = require('../services/tokenServices');
 const modelUser = require('../models/users.model');
+const { ADMIN_ACCESS_ROLES, USER_ROLES } = require('../constants/userRoles');
 
 const asyncHandler = (fn) => {
     return (req, res, next) => {
@@ -29,7 +30,7 @@ const authAdmin = async (req, res, next) => {
         const decoded = await verifyToken(token);
         const { id } = decoded;
         const findUser = await modelUser.findOne({ where: { id } });
-        if (findUser.isAdmin === '0') {
+        if (!ADMIN_ACCESS_ROLES.includes(findUser.isAdmin ?? USER_ROLES.CUSTOMER)) {
             throw new BadUser2RequestError('Bạn không có quyền truy cập');
         }
         req.user = decoded;

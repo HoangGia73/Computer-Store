@@ -4,6 +4,7 @@ import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import classNames from 'classnames/bind';
 import styles from './ManagerUser.module.scss';
 import { requestGetUsers, requestUpdateRoleUser } from '../../../../config/request';
+import { ROLE_LABELS, ROLE_OPTIONS } from '../../../../constants/userRoles';
 
 const cx = classNames.bind(styles);
 
@@ -75,12 +76,9 @@ function ManagerUser() {
             title: 'Vai trò',
             dataIndex: 'isAdmin',
             key: 'isAdmin',
-            render: (isAdmin) => (isAdmin === '1' ? 'Admin' : 'User'),
-            filters: [
-                { text: 'Admin', value: '1' },
-                { text: 'User', value: '0' },
-            ],
-            onFilter: (value, record) => record.isAdmin === value,
+            render: (isAdmin) => ROLE_LABELS[isAdmin] || 'Không xác định',
+            filters: ROLE_OPTIONS.map(({ label, value }) => ({ text: label, value })),
+            onFilter: (value, record) => String(record.isAdmin) === value,
         },
         {
             title: 'Thao tác',
@@ -144,8 +142,11 @@ function ManagerUser() {
                         rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}
                     >
                         <Select>
-                            <Select.Option value="0">User</Select.Option>
-                            <Select.Option value="1">Admin</Select.Option>
+                            {ROLE_OPTIONS.map(({ value, label }) => (
+                                <Select.Option key={value} value={value}>
+                                    {label}
+                                </Select.Option>
+                            ))}
                         </Select>
                     </Form.Item>
                 </Form>
