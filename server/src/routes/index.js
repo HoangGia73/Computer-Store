@@ -36,6 +36,7 @@ function routes(app) {
     app.post('/api/reset-password', userRoutes);
     app.post('/api/update-role-user', userRoutes);
     app.get('/api/users/pie-chart', userRoutes);
+    app.delete('/api/delete-user/:id', userRoutes);
 
     ///// product
     app.post('/api/create-product', productRoutes);

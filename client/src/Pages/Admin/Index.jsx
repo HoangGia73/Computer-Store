@@ -1,11 +1,10 @@
 import classNames from 'classnames/bind';
 import styles from './Index.module.scss';
-import { Layout, Menu, theme, Avatar, Space, Dropdown } from 'antd';
+import { Layout, Menu, theme } from 'antd';
 import {
     HomeOutlined,
     ShoppingOutlined,
     UserOutlined,
-    LogoutOutlined,
     MenuFoldOutlined,
     MenuUnfoldOutlined,
     FileOutlined,
@@ -21,81 +20,72 @@ import { requestAdmin } from '../../config/request';
 import { useNavigate } from 'react-router-dom';
 import ManagerBlogs from './Components/ManagerBlogs/ManagerBlogs';
 import ManagerContact from './Components/ManagerContact/ManagerContact';
+
 const { Header, Sider, Content } = Layout;
 const cx = classNames.bind(styles);
+
+const MENU_CONFIG = [
+    { key: 'home', icon: <HomeOutlined />, label: 'Trang chu' },
+    { key: 'products', icon: <ShoppingOutlined />, label: 'Quan ly san pham' },
+    { key: 'category', icon: <FileOutlined />, label: 'Quan ly danh muc' },
+    { key: 'order', icon: <ShoppingOutlined />, label: 'Quan ly don hang' },
+    { key: 'users', icon: <UserOutlined />, label: 'Quan ly nguoi dung' },
+    { key: 'blogs', icon: <FileOutlined />, label: 'Quan ly tin tuc' },
+    { key: 'contact', icon: <FileOutlined />, label: 'Quan ly lien he' },
+];
+
+const getAccessibleKeys = (position) => {
+    switch (position) {
+        case 'warehouse_manager':
+            return ['products'];
+        case 'staff':
+            return ['blogs', 'contact'];
+        case 'admin':
+        default:
+            return MENU_CONFIG.map((item) => item.key);
+    }
+};
 
 function Admin() {
     const [collapsed, setCollapsed] = useState(false);
     const { token } = theme.useToken();
-    const [selectedKey, setSelectedKey] = useState('home');
+    const [selectedKey, setSelectedKey] = useState(null);
+    const [menuItems, setMenuItems] = useState([]);
 
     const navigate = useNavigate();
 
     useEffect(() => {
-        const checkAdmin = async () => {
+        const fetchAdminInfo = async () => {
             try {
-                await requestAdmin();
+                const adminInfo = await requestAdmin();
+                const position = adminInfo?.position || 'admin';
+                const accessibleKeys = getAccessibleKeys(position);
+                const filteredMenu = MENU_CONFIG.filter((item) => accessibleKeys.includes(item.key));
+                setMenuItems(filteredMenu);
+                if (filteredMenu.length > 0) {
+                    setSelectedKey(filteredMenu[0].key);
+                } else {
+                    setSelectedKey(null);
+                }
             } catch (error) {
                 navigate('/');
             }
         };
-        checkAdmin();
-    }, []);
 
-    const menuItems = [
-        {
-            key: 'home',
-            icon: <HomeOutlined />,
-            label: 'Trang chủ',
-        },
-        {
-            key: 'products',
-            icon: <ShoppingOutlined />,
-            label: 'Quản lý sản phẩm',
-        },
-        {
-            key: 'category',
-            icon: <FileOutlined />,
-            label: 'Quản lý danh mục',
-        },
-        {
-            key: 'order',
-            icon: <ShoppingOutlined />,
-            label: 'Quản lý đơn hàng',
-        },
-        {
-            key: 'users',
-            icon: <UserOutlined />,
-            label: 'Quản lý người dùng',
-        },
-        {
-            key: 'blogs',
-            icon: <FileOutlined />,
-            label: 'Quản lý bài viết',
-        },
-        {
-            key: 'contact',
-            icon: <FileOutlined />,
-            label: 'Quản lý liên hệ',
-        },
-    ];
+        fetchAdminInfo();
+    }, [navigate]);
 
-    const userMenuItems = [
-        {
-            key: 'profile',
-            icon: <UserOutlined />,
-            label: 'Thông tin cá nhân',
-        },
-        {
-            key: 'logout',
-            icon: <LogoutOutlined />,
-            label: 'Đăng xuất',
-            danger: true,
-        },
-    ];
+    useEffect(() => {
+        if (!menuItems.length) {
+            return;
+        }
+        if (!selectedKey || !menuItems.some((item) => item.key === selectedKey)) {
+            setSelectedKey(menuItems[0].key);
+        }
+    }, [menuItems, selectedKey]);
 
-    const renderContent = () => {
-        switch (selectedKey) {
+    const renderViewByKey = (key) => {
+        switch (key) {
             case 'products':
                 return <ManagerProduct />;
             case 'home':
@@ -111,8 +101,18 @@ function Admin() {
             case 'contact':
                 return <ManagerContact />;
             default:
-                return <DashBoard />;
+                return null;
         }
+    };
+
+    const renderContent = () => {
+        if (!selectedKey) {
+            return null;
+        }
+        if (!menuItems.some((item) => item.key === selectedKey)) {
+            return null;
+        }
+        return renderViewByKey(selectedKey);
     };
 
     return (
@@ -129,9 +129,9 @@ function Admin() {
                 <Menu
                     theme="dark"
                     mode="inline"
-                    selectedKeys={[selectedKey]}
+                    selectedKeys={selectedKey ? [selectedKey] : []}
                     items={menuItems}
-                    onClick={(item) => setSelectedKey(item.key)}
+                    onClick={({ key }) => setSelectedKey(key)}
                     style={{
                         background: 'transparent',
                     }}

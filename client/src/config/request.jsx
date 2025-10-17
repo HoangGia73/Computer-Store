@@ -22,6 +22,11 @@ export const requestUpdateRoleUser = async (data) => {
     return res.data;
 };
 
+export const requestDeleteUser = async (id) => {
+    const res = await request.delete(`/api/delete-user/${id}`);
+    return res.data;
+};
+
 export const requestGetContacts = async () => {
     const res = await request.get('/api/get-contacts');
     return res.data;
@@ -74,7 +79,7 @@ export const requestGetProductHotSale = async () => {
 
 export const requestAdmin = async () => {
     const res = await request.get('/api/admin');
-    return res.data;
+    return res.data.metadata;
 };
 
 export const requestCreateProductPreview = async (data) => {
