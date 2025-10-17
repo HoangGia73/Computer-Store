@@ -39,7 +39,7 @@ const getAccessibleKeys = (position) => {
         case 'warehouse_manager':
             return ['products'];
         case 'staff':
-            return ['blogs', 'contact'];
+            return ['home', 'order', 'blogs', 'contact'];
         case 'admin':
         default:
             return MENU_CONFIG.map((item) => item.key);
