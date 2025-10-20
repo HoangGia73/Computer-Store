@@ -3,6 +3,9 @@ const modelApiKey = require('../models/apiKey.model');
 const modelProduct = require('../models/products.model');
 const modelPayment = require('../models/payments.model');
 const modelUserWatch = require('../models/userWatchProduct.model');
+const modelCart = require('../models/cart.model');
+const modelBuildPcCart = require('../models/buildPcCart.model');
+const modelProductPreview = require('../models/productPreview');
 const modelOtp = require('../models/otp.model');
 const modelCategory = require('../models/category.model');
 
@@ -21,6 +24,8 @@ const jwt = require('jsonwebtoken');
 const otpGenerator = require('otp-generator');
 
 require('dotenv').config();
+
+const ADMIN_POSITIONS = ['admin', 'warehouse_manager', 'staff'];
 
 class controllerUser {
     async registerUser(req, res) {
@@ -51,6 +56,7 @@ class controllerUser {
         const token = await createToken({
             id: dataUser.id,
             isAdmin: dataUser.isAdmin,
+            position: dataUser.position,
             address: dataUser.address,
             phone: dataUser.phone,
         });
@@ -97,7 +103,11 @@ class controllerUser {
             return res.status(400).json({ message: 'Tài khoản hoặc mật khẩu không chính xác' });
         }
         await createApiKey(findUser.id);
-        const token = await createToken({ id: findUser.id, isAdmin: findUser.isAdmin });
+        const token = await createToken({
+            id: findUser.id,
+            isAdmin: findUser.isAdmin,
+            position: findUser.position,
+        });
         const refreshToken = await createRefreshToken({ id: findUser.id });
         res.cookie('token', token, {
             httpOnly: true, // Chặn truy cập từ JavaScript (bảo mật hơn)
@@ -152,7 +162,11 @@ class controllerUser {
         const decoded = await verifyToken(refreshToken);
 
         const user = await modelUser.findOne({ where: { id: decoded.id } });
-        const token = await createToken({ id: user.id });
+        const token = await createToken({
+            id: user.id,
+            isAdmin: user.isAdmin,
+            position: user.position,
+        });
         res.cookie('token', token, {
             httpOnly: true, // Chặn truy cập từ JavaScript (bảo mật hơn)
             secure: true, // Chỉ gửi trên HTTPS (để đảm bảo an toàn)
@@ -310,7 +324,11 @@ class controllerUser {
         const user = await modelUser.findOne({ where: { email: dataToken.email } });
         if (user) {
             await createApiKey(user.id);
-            const token = await createToken({ id: user.id });
+            const token = await createToken({
+                id: user.id,
+                isAdmin: user.isAdmin,
+                position: user.position,
+            });
             const refreshToken = await createRefreshToken({ id: user.id });
             res.cookie('token', token, {
                 httpOnly: true, // Chặn truy cập từ JavaScript (bảo mật hơn)
@@ -339,7 +357,11 @@ class controllerUser {
             });
             await newUser.save();
             await createApiKey(newUser.id);
-            const token = await createToken({ id: newUser.id });
+            const token = await createToken({
+                id: newUser.id,
+                isAdmin: newUser.isAdmin,
+                position: newUser.position,
+            });
             const refreshToken = await createRefreshToken({ id: newUser.id });
             res.cookie('token', token, {
                 httpOnly: true, // Chặn truy cập từ JavaScript (bảo mật hơn)
@@ -529,14 +551,90 @@ class controllerUser {
     }
 
     async updateRoleUser(req, res) {
-        const { userId, role } = req.body;
+        const { userId, role, position } = req.body;
         const findUser = await modelUser.findOne({ where: { id: userId } });
         if (!findUser) {
-            throw new BadUserRequestError('Người dùng không tồn tại');
+            throw new BadUserRequestError('Nguoi dung khong ton tai');
         }
+        if (role !== '0' && role !== '1') {
+            throw new BadUserRequestError('Vai tro khong hop le');
+        }
+
+        if (role === '1') {
+            const normalizedPosition = typeof position === 'string' ? position.trim() : '';
+            if (!ADMIN_POSITIONS.includes(normalizedPosition)) {
+                throw new BadUserRequestError('Chuc vu khong hop le');
+            }
+            findUser.position = normalizedPosition;
+        } else {
+            findUser.position = null;
+        }
+
         findUser.isAdmin = role;
         await findUser.save();
-        new OK({ message: 'Cập nhật quyền người dùng thành công' }).send(res);
+        new OK({ message: 'Cap nhat quyen nguoi dung thanh cong' }).send(res);
+    }
+
+    async getAdminInfo(req, res) {
+        const userId = req.user?.id;
+        if (!userId) {
+            throw new BadUserRequestError('Khong tim thay nguoi dung');
+        }
+
+        const user = await modelUser.findOne({
+            where: { id: userId },
+            attributes: ['id', 'fullName', 'email', 'isAdmin', 'position'],
+        });
+
+        if (!user) {
+            throw new BadUserRequestError('Nguoi dung khong ton tai');
+        }
+
+        const position = user.position || 'admin';
+
+        new OK({
+            message: 'Lay thong tin admin thanh cong',
+            metadata: {
+                id: user.id,
+                fullName: user.fullName,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                position,
+            },
+        }).send(res);
+    }
+    async deleteUser(req, res) {
+        const { id } = req.params;
+        const requesterId = req.user?.id;
+
+        if (!id) {
+            throw new BadUserRequestError('User id khong hop le');
+        }
+
+        if (requesterId && requesterId === id) {
+            throw new BadUserRequestError('Khong the xoa tai khoan cua ban than');
+        }
+
+        const user = await modelUser.findOne({ where: { id } });
+        if (!user) {
+            throw new BadUserRequestError('Nguoi dung khong ton tai');
+        }
+
+        if (user.isAdmin === '1') {
+            throw new BadUserRequestError('Khong the xoa tai khoan admin');
+        }
+
+        await modelPayment.destroy({ where: { userId: id } });
+        await modelCart.destroy({ where: { userId: id } });
+        await modelBuildPcCart.destroy({ where: { userId: id } });
+        await modelUserWatch.destroy({ where: { userId: id } });
+        await modelProductPreview.destroy({ where: { userId: id } });
+        await modelApiKey.destroy({ where: { userId: id } });
+        await modelOtp.destroy({ where: { email: user.email } });
+
+        await modelUser.destroy({ where: { id } });
+
+        new OK({ message: 'Xoa nguoi dung thanh cong' }).send(res);
     }
 
     async getBieuDoTron(req, res) {

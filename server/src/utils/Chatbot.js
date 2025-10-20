@@ -18,13 +18,18 @@ async function askQuestion(question) {
             .join('\n');
 
         const prompt = `
-         Bạn là một trợ lý bán hàng chuyên nghiệp. 
-        Đây là danh sách sản phẩm hiện có trong cửa hàng:
-        ${productData}
+        Bạn là trợ lý bán hàng chăm sóc khách hàng cho cửa hàng máy tính.
 
-        câu hỏi của khách hàng ${question}
-        Hãy trả lời một cách tự nhiên, thân thiện và hữu ích.
-        `;
+            Dữ liệu sản phẩm hiện có:
+            ${productData}
+
+            Yêu cầu:
+            1. Đọc kỹ câu hỏi của khách: "${question}".
+            2. Tư vấn chính xác, thân thiện, bằng tiếng Việt tự nhiên.
+            3. Nếu liên quan đến cấu hình hoặc so sánh, giải thích ngắn gọn lý do đề xuất.
+            4. Khi thông tin không có trong danh sách, hãy nói rõ và gợi ý khách liên hệ tư vấn viên.
+
+            Bắt đầu trả lời ngay:`;
 
         const result = await model.generateContent(prompt);
         const answer = result.response.text();

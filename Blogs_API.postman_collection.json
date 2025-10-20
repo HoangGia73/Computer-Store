@@ -1,0 +1,492 @@
+{
+	"info": {
+		"_postman_id": "blogs-api-collection-2025",
+		"name": "Computer Store - Blogs API",
+		"description": "Collection đầy đủ các API quản lý Blogs cho hệ thống Computer Store",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Admin - Tạo Blog Mới",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"Response has blog data\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.metadata).to.have.property('id');",
+							"    pm.expect(jsonData.metadata).to.have.property('title');",
+							"    pm.expect(jsonData.metadata).to.have.property('content');",
+							"});",
+							"",
+							"// Lưu blog ID để dùng cho các test khác",
+							"if (pm.response.code === 201) {",
+							"    var jsonData = pm.response.json();",
+							"    pm.environment.set(\"blog_id\", jsonData.metadata.id);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{admin_api_key}}",
+						"type": "text",
+						"description": "API Key của Admin (nếu có)"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}",
+						"type": "text",
+						"description": "JWT Token của Admin"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"Top 10 CPU Tốt Nhất Năm 2025\",\n    \"content\": \"<h2>Giới thiệu</h2><p>Trong bài viết này, chúng tôi sẽ giới thiệu top 10 CPU gaming mạnh mẽ nhất hiện nay...</p><h3>1. Intel Core i9-14900K</h3><p>Với 24 nhân 32 luồng, đây là CPU cao cấp nhất...</p>\",\n    \"image\": \"https://example.com/images/cpu-top-10.jpg\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/create-blog",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"create-blog"
+					]
+				},
+				"description": "**Chức năng:** Tạo một bài viết blog mới\n\n**Yêu cầu:**\n- Chỉ Admin mới có quyền truy cập (cần authAdmin)\n- Token JWT hợp lệ trong header Authorization\n\n**Body Parameters:**\n- `title` (string, required): Tiêu đề bài viết\n- `content` (string, required): Nội dung bài viết (có thể chứa HTML)\n- `image` (string, required): URL ảnh đại diện cho bài viết\n\n**Response:**\n- Status: 201 Created\n- Trả về thông tin blog vừa tạo"
+			},
+			"response": []
+		},
+		{
+			"name": "Lấy Danh Sách Tất Cả Blogs",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response is an array of blogs\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.metadata).to.be.an('array');",
+							"});",
+							"",
+							"pm.test(\"Each blog has required fields\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    if (jsonData.metadata.length > 0) {",
+							"        var firstBlog = jsonData.metadata[0];",
+							"        pm.expect(firstBlog).to.have.property('id');",
+							"        pm.expect(firstBlog).to.have.property('title');",
+							"        pm.expect(firstBlog).to.have.property('content');",
+							"        pm.expect(firstBlog).to.have.property('image');",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/get-blogs",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"get-blogs"
+					]
+				},
+				"description": "**Chức năng:** Lấy danh sách tất cả bài viết blog\n\n**Yêu cầu:**\n- Public API, không cần authentication\n\n**Response:**\n- Status: 200 OK\n- Trả về mảng chứa tất cả các bài viết blog"
+			},
+			"response": []
+		},
+		{
+			"name": "Lấy Chi Tiết Blog Theo ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response contains blog details\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.metadata).to.have.property('id');",
+							"    pm.expect(jsonData.metadata).to.have.property('title');",
+							"    pm.expect(jsonData.metadata).to.have.property('content');",
+							"    pm.expect(jsonData.metadata).to.have.property('image');",
+							"    pm.expect(jsonData.metadata).to.have.property('createdAt');",
+							"    pm.expect(jsonData.metadata).to.have.property('updatedAt');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/get-blog-by-id?id={{blog_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"get-blog-by-id"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "{{blog_id}}",
+							"description": "ID của blog cần lấy thông tin"
+						}
+					]
+				},
+				"description": "**Chức năng:** Lấy thông tin chi tiết của một bài viết theo ID\n\n**Yêu cầu:**\n- Public API, không cần authentication\n\n**Query Parameters:**\n- `id` (number, required): ID của bài viết cần xem\n\n**Response:**\n- Status: 200 OK\n- Trả về thông tin chi tiết của bài viết\n\n**Error Cases:**\n- 404: Bài viết không tồn tại"
+			},
+			"response": []
+		},
+		{
+			"name": "Lấy Blog Theo ID - Không Tồn Tại",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 404\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"",
+							"pm.test(\"Error message present\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('message');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/get-blog-by-id?id=999999",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"get-blog-by-id"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "999999",
+							"description": "ID không tồn tại trong database"
+						}
+					]
+				},
+				"description": "**Test Case:** Kiểm tra phản hồi khi truy vấn blog với ID không tồn tại\n\n**Expected Result:**\n- Status: 404 Not Found\n- Message: \"Bài viết không tồn tại\""
+			},
+			"response": []
+		},
+		{
+			"name": "Admin - Xóa Blog",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Delete successful\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.include('Xóa bài viết thành công');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{admin_api_key}}",
+						"type": "text",
+						"description": "API Key của Admin (nếu có)"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}",
+						"type": "text",
+						"description": "JWT Token của Admin"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/delete-blog?id={{blog_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"delete-blog"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "{{blog_id}}",
+							"description": "ID của blog cần xóa"
+						}
+					]
+				},
+				"description": "**Chức năng:** Xóa một bài viết blog\n\n**Yêu cầu:**\n- Chỉ Admin mới có quyền truy cập (cần authAdmin)\n- Token JWT hợp lệ trong header Authorization\n\n**Query Parameters:**\n- `id` (number, required): ID của bài viết cần xóa\n\n**Response:**\n- Status: 200 OK\n- Trả về số lượng bản ghi đã xóa"
+			},
+			"response": []
+		},
+		{
+			"name": "Admin - Tạo Blog Thiếu Thông Tin",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 400\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"",
+							"pm.test(\"Error message about missing info\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.include('Vui lòng nhập đầy đủ thông tin');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"Test Blog\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/create-blog",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"create-blog"
+					]
+				},
+				"description": "**Test Case:** Kiểm tra validation khi tạo blog thiếu thông tin\n\n**Expected Result:**\n- Status: 400 Bad Request\n- Message: \"Vui lòng nhập đầy đủ thông tin\""
+			},
+			"response": []
+		},
+		{
+			"name": "Admin - Tạo Blog Với Dữ Liệu Đầy Đủ",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"Blog created with correct data\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    var requestBody = JSON.parse(pm.request.body.raw);",
+							"    ",
+							"    pm.expect(jsonData.metadata.title).to.eql(requestBody.title);",
+							"    pm.expect(jsonData.metadata.content).to.eql(requestBody.content);",
+							"    pm.expect(jsonData.metadata.image).to.eql(requestBody.image);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"Hướng Dẫn Build PC Gaming Tầm Trung 2025\",\n    \"content\": \"<div class='blog-content'><h2>Giới Thiệu</h2><p>Bạn đang muốn build một PC gaming với ngân sách tầm trung? Bài viết này sẽ hướng dẫn chi tiết...</p><h3>Cấu Hình Đề Xuất</h3><ul><li><strong>CPU:</strong> Intel Core i5-13600K hoặc AMD Ryzen 5 7600X</li><li><strong>GPU:</strong> RTX 4060 Ti hoặc RX 7700 XT</li><li><strong>RAM:</strong> 16GB DDR5 (2x8GB) 5600MHz</li><li><strong>Mainboard:</strong> B760 hoặc B650</li><li><strong>SSD:</strong> 1TB NVMe Gen4</li><li><strong>PSU:</strong> 650W 80+ Gold</li><li><strong>Case:</strong> Case ATX với airflow tốt</li></ul><h3>Tổng Kết</h3><p>Với tổng ngân sách khoảng 25-30 triệu đồng, bạn sẽ có một PC gaming mạnh mẽ...</p></div>\",\n    \"image\": \"https://example.com/images/pc-gaming-tam-trung-2025.jpg\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/create-blog",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"create-blog"
+					]
+				},
+				"description": "**Test Case:** Tạo blog với nội dung HTML phức tạp và đầy đủ thông tin\n\n**Expected Result:**\n- Status: 201 Created\n- Blog được tạo thành công với đầy đủ thông tin"
+			},
+			"response": []
+		},
+		{
+			"name": "Tạo Multiple Blogs - Sample Data",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"So Sánh RTX 4070 vs RX 7800 XT - Card Đồ Họa Nào Đáng Mua?\",\n    \"content\": \"<h2>Giới Thiệu</h2><p>RTX 4070 và RX 7800 XT là hai lựa chọn hàng đầu trong phân khúc tầm trung cao...</p><h3>Hiệu Năng Gaming</h3><p>Ở độ phân giải 1440p, RTX 4070 cho FPS trung bình cao hơn 8-10% nhờ kiến trúc Ada Lovelace...</p><h3>Tính Năng Độc Quyền</h3><ul><li>RTX 4070: DLSS 3, Ray Tracing Gen 3, NVIDIA Reflex</li><li>RX 7800 XT: FSR 3, Ray Tracing RDNA 3, Smart Access Memory</li></ul><h3>Kết Luận</h3><p>Nếu ưu tiên ray tracing và DLSS, chọn RTX 4070. Nếu muốn giá trị tốt hơn, chọn RX 7800 XT.</p>\",\n    \"image\": \"https://example.com/images/rtx4070-vs-rx7800xt.jpg\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/create-blog",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"create-blog"
+					]
+				},
+				"description": "**Sample Data:** Blog so sánh card đồ họa - dùng để tạo dữ liệu mẫu cho testing"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "blog_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "admin_token",
+			"value": "your_admin_jwt_token_here",
+			"type": "string"
+		},
+		{
+			"key": "admin_api_key",
+			"value": "your_admin_api_key_here",
+			"type": "string"
+		}
+	]
+}

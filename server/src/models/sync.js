@@ -62,7 +62,7 @@ productPreview.belongsTo(Product, { foreignKey: 'productId' });
 
 const syncDatabase = async () => {
     try {
-        await User.sync({ alter: false }); // Tạo bảng users trước
+        await User.sync({ alter: true }); // Tạo bảng users trước
         await apiKey.sync({ alter: false }); // Sau đó tạo bảng apiKey
         await Category.sync({ alter: false }); // Tạo bảng category trước
         await Product.sync({ alter: false }); // Sau đó tạo bảng products

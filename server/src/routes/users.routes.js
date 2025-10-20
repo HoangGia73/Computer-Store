@@ -27,11 +27,10 @@ router.post('/api/forgot-password', asyncHandler(controllerUser.forgotPassword))
 router.post('/api/reset-password', asyncHandler(controllerUser.resetPassword));
 
 router.post('/api/update-role-user', asyncHandler(controllerUser.updateRoleUser));
+router.delete('/api/delete-user/:id', authAdmin, asyncHandler(controllerUser.deleteUser));
 
 router.get('/api/users/pie-chart', asyncHandler(controllerUser.getBieuDoTron));
 
-router.get('/api/admin', authAdmin, (req, res) => {
-    return res.status(200).json({ message: true });
-});
+router.get('/api/admin', authAdmin, asyncHandler(controllerUser.getAdminInfo));
 
 module.exports = router;

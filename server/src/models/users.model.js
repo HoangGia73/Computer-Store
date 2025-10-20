@@ -34,6 +34,10 @@ const User = connect.define(
             allowNull: false,
             defaultValue: '0',
         },
+        position: {
+            type: DataTypes.ENUM('admin', 'warehouse_manager', 'staff'),
+            allowNull: true,
+        },
         typeLogin: {
             type: DataTypes.ENUM('google', 'email'),
             allowNull: false,
