@@ -200,9 +200,9 @@ function Cart() {
                 await fetchCart();
                 navigate(`/payment/${res.metadata}`);
             }
-            if (typePayment === 'MOMO') {
+            if (typePayment === 'PAYPAL') {
                 const res = await requestPayment(data);
-                window.open(res.metadata.payUrl, '_blank');
+                window.open(res.metadata.approvalUrl, '_blank');
             }
             if (typePayment === 'VNPAY') {
                 const res = await requestPayment(data);
@@ -283,12 +283,13 @@ function Cart() {
                                             Thanh toán khi nhận hàng
                                         </Button>
                                         <Button
-                                            onClick={() => handlePayment('MOMO')}
+                                            onClick={() => handlePayment('PAYPAL')}
                                             type="default"
                                             block
                                             disabled={!checkBox}
+                                            style={{ backgroundColor: '#0070ba', color: 'white' }}
                                         >
-                                            Thanh toán qua MOMO
+                                            Thanh toán qua PayPal
                                         </Button>
                                         <Button
                                             onClick={() => handlePayment('VNPAY')}

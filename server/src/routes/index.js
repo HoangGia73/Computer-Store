@@ -76,7 +76,7 @@ function routes(app) {
     app.post('/api/delete-all-cart-build-pc', cartRoutes);
     ///// payments
     app.post('/api/payments', paymentsRoutes);
-    app.get('/api/check-payment-momo', paymentsRoutes);
+    app.get('/api/check-payment-paypal', paymentsRoutes);
     app.get('/api/check-payment-vnpay', paymentsRoutes);
     app.post('/api/cancel-order', paymentsRoutes);
     app.get('/api/get-payment', paymentsRoutes);

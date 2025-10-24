@@ -135,8 +135,8 @@ function DashBoard() {
             render: (type) => {
                 const colors = {
                     COD: 'blue',
-                    Banking: 'green',
-                    Momo: 'purple',
+                    VNPAY: 'green',
+                    PAYPAL: '#0070ba',
                 };
                 return <Tag color={colors[type]}>{type}</Tag>;
             },

@@ -6,6 +6,7 @@ import styles from './PaymentSuccess.module.scss';
 import classNames from 'classnames/bind';
 import { requestGetProductByIdPayment } from '../../config/request';
 import Header from '../../Components/Header/Header';
+import { useStore } from '../../hooks/useStore';
 
 const cx = classNames.bind(styles);
 
@@ -13,6 +14,7 @@ function PaymentSuccess() {
     const navigate = useNavigate();
     const { id } = useParams();
     const [orderData, setOrderData] = useState(null);
+    const { fetchCart } = useStore();
 
     const fetchData = async () => {
         try {
@@ -27,12 +29,14 @@ function PaymentSuccess() {
 
     useEffect(() => {
         fetchData();
+        // Refresh giỏ hàng để cập nhật UI (giỏ hàng đã được xóa sau thanh toán)
+        fetchCart();
     }, [id]);
 
     const getPaymentTypeText = (type) => {
         const types = {
             COD: 'Thanh toán khi nhận hàng',
-            MOMO: 'Ví MoMo',
+            PAYPAL: 'PayPal',
             VNPAY: 'VNPay',
         };
         return types[type] || type;

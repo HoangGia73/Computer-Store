@@ -1,6 +1,5 @@
 const modelPayments = require('../models/payments.model');
 const modelCart = require('../models/cart.model');
-
 const modelUsers = require('../models/users.model');
 const modelProducts = require('../models/products.model');
 
@@ -13,8 +12,16 @@ const crypto = require('crypto');
 const { VNPay, ignoreLogger, ProductCode, VnpLocale, dateFormat } = require('vnpay');
 const { log } = require('util');
 
+// PayPal SDK
+const paypal = require('@paypal/checkout-server-sdk');
+const paypalClient = require('../config/paypal.config');
+
+/**
+ * Hàm tạo mã ID thanh toán duy nhất
+ * Format: PAY + timestamp + seconds + milliseconds
+ * Ví dụ: PAY172982340015123456
+ */
 function generatePayID() {
-    // Tạo ID thanh toán bao gồm cả giây để tránh trùng lặp
     const now = new Date();
     const timestamp = now.getTime();
     const seconds = now.getSeconds().toString().padStart(2, '0');
@@ -23,23 +30,36 @@ function generatePayID() {
 }
 
 class PaymentsController {
+    /**
+     * Xử lý thanh toán cho các phương thức: COD, PayPal, VNPay
+     * @param {Object} req - Request object chứa thông tin user và typePayment
+     * @param {Object} res - Response object
+     */
     async payments(req, res) {
         const { id } = req.user;
         const { typePayment } = req.body;
+
+        // Lấy giỏ hàng của user
         const findCart = await modelCart.findAll({ where: { userId: id } });
+
+        // Validate thông tin giỏ hàng
         if (!findCart[0].address || !findCart[0].phone || !findCart[0].fullName) {
-            throw new BadRequestError('Vui lòng nhập thống tin giỏ hàng');
+            throw new BadRequestError('Vui lòng nhập thông tin giỏ hàng');
         }
 
+        // Tính tổng tiền
         const totalPrice = findCart.reduce((total, item) => total + item.totalPrice, 0);
-        // Tạo mã thanh toán mới cho mỗi yêu cầu thanh toán
+
+        // Tạo mã thanh toán duy nhất cho đơn hàng
         const paymentId = generatePayID();
 
+        // ===== PHƯƠNG THỨC 1: THANH TOÁN KHI NHẬN HÀNG (COD) =====
         if (typePayment === 'COD') {
             const dataCart = await modelCart.findAll({
                 where: { userId: id },
             });
 
+            // Tạo bản ghi thanh toán cho từng sản phẩm trong giỏ
             const paymentPromises = dataCart.map((cartItem) => {
                 return modelPayments.create({
                     userId: id,
@@ -51,79 +71,68 @@ class PaymentsController {
                     totalPrice: totalPrice,
                     status: 'pending',
                     typePayment: typePayment,
-                    idPayment: paymentId, // Sử dụng paymentId thay vì singlePaymentId
+                    idPayment: paymentId,
                 });
             });
 
             await Promise.all(paymentPromises);
 
-            // Clear the cart after successful payment creation
+            // Xóa giỏ hàng sau khi tạo đơn thành công
             await modelCart.destroy({ where: { userId: id } });
 
-            new OK({ message: 'Thanh toán thanh cong', metadata: paymentId }).send(res);
+            new OK({ message: 'Thanh toán thành công', metadata: paymentId }).send(res);
         }
 
-        if (typePayment === 'MOMO') {
-            var partnerCode = 'MOMO';
-            var accessKey = 'F8BBA842ECF85';
-            var secretkey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
-            var requestId = partnerCode + new Date().getTime();
-            var orderId = requestId;
-            var orderInfo = `thanh toan ${findCart[0]?.userId}`; // nội dung giao dịch thanh toán
-            var redirectUrl = 'http://localhost:3000/api/check-payment-momo'; // 8080
-            var ipnUrl = 'http://localhost:3000/api/check-payment-momo';
-            var amount = totalPrice;
-            var requestType = 'captureWallet';
-            var extraData = ''; //pass empty value if your merchant does not have stores
+        // ===== PHƯƠNG THỨC 2: THANH TOÁN QUA PAYPAL =====
+        if (typePayment === 'PAYPAL') {
+            try {
+                // Tạo PayPal Order Request
+                const request = new paypal.orders.OrdersCreateRequest();
+                request.prefer('return=representation');
+                request.requestBody({
+                    intent: 'CAPTURE', // Capture payment ngay lập tức
+                    purchase_units: [
+                        {
+                            amount: {
+                                currency_code: 'USD',
+                                // Chuyển đổi VND sang USD (tỷ giá mẫu: 1 USD = 24,000 VND)
+                                // TODO: Nên sử dụng API tỷ giá thực tế cho production
+                                value: (totalPrice / 24000).toFixed(2),
+                            },
+                            description: `Đơn hàng của ${findCart[0]?.fullName || 'khách hàng'}`,
+                            // Lưu userId và paymentId để xử lý callback
+                            custom_id: `${id}|${paymentId}`,
+                        },
+                    ],
+                    application_context: {
+                        brand_name: 'Computer Store',
+                        landing_page: 'BILLING',
+                        user_action: 'PAY_NOW',
+                        // URL callback khi thanh toán thành công
+                        return_url: 'http://localhost:3000/api/check-payment-paypal',
+                        // URL khi user hủy thanh toán
+                        cancel_url: 'http://localhost:5173/cart?payment=cancelled',
+                    },
+                });
 
-            var rawSignature =
-                'accessKey=' +
-                accessKey +
-                '&amount=' +
-                amount +
-                '&extraData=' +
-                extraData +
-                '&ipnUrl=' +
-                ipnUrl +
-                '&orderId=' +
-                orderId +
-                '&orderInfo=' +
-                orderInfo +
-                '&partnerCode=' +
-                partnerCode +
-                '&redirectUrl=' +
-                redirectUrl +
-                '&requestId=' +
-                requestId +
-                '&requestType=' +
-                requestType;
-            //puts raw signature
+                // Gọi PayPal API để tạo order
+                const order = await paypalClient.client().execute(request);
 
-            //signature
-            var signature = crypto.createHmac('sha256', secretkey).update(rawSignature).digest('hex');
+                // Lấy URL để redirect user đến trang thanh toán PayPal
+                const approvalUrl = order.result.links.find((link) => link.rel === 'approve').href;
 
-            //json object send to MoMo endpoint
-            const requestBody = JSON.stringify({
-                partnerCode: partnerCode,
-                accessKey: accessKey,
-                requestId: requestId,
-                amount: amount,
-                orderId: orderId,
-                orderInfo: orderInfo,
-                redirectUrl: redirectUrl,
-                ipnUrl: ipnUrl,
-                extraData: extraData,
-                requestType: requestType,
-                signature: signature,
-                lang: 'en',
-            });
-
-            const response = await axios.post('https://test-payment.momo.vn/v2/gateway/api/create', requestBody, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-            new OK({ message: 'Thanh toán thông báo', metadata: response.data }).send(res);
+                new OK({
+                    message: 'Đã tạo đơn hàng PayPal',
+                    metadata: {
+                        orderId: order.result.id,
+                        approvalUrl: approvalUrl,
+                        paymentId: paymentId,
+                    },
+                }).send(res);
+            } catch (error) {
+                console.error('💥 PayPal Order Creation Error:', error.message);
+                throw new BadRequestError('Lỗi khi tạo đơn hàng PayPal: ' + error.message);
+            }
         }
 
         if (typePayment === 'VNPAY') {
@@ -154,32 +163,97 @@ class PaymentsController {
         throw new BadRequestError('Phương thức thanh toán không hợp lệ');
     }
 
-    async checkPaymentMomo(req, res, next) {
-        const { orderInfo, resultCode } = req.query;
+    async checkPaymentPaypal(req, res, next) {
+        try {
+            console.log('🔔 ===== PayPal Callback Received =====');
+            console.log('� Query params:', req.query);
 
-        if (resultCode === '0') {
-            const result = orderInfo.split(' ')[2];
-            const findCart = await modelCart.findAll({ userId: result });
-            // Tạo mã thanh toán mới cho mỗi thanh toán Momo
-            const paymentId = generatePayID();
+            const { token, PayerID } = req.query;
 
-            findCart.map(async (item) => {
-                return modelPayments.create({
-                    userId: item.userId,
-                    productId: item.productId,
-                    quantity: item.quantity,
-                    fullName: item.fullName,
-                    phone: item.phone,
-                    address: item.address,
-                    totalPrice: findCart.reduce((total, item) => total + item.totalPrice, 0),
-                    status: 'pending',
-                    typePayment: 'MOMO',
-                    idPayment: paymentId, // Sử dụng paymentId mới
-                });
-            });
+            if (!token || !PayerID) {
+                console.log('❌ Missing required params - token:', token, 'PayerID:', PayerID);
+                return res.redirect('http://localhost:5173/cart?payment=failed');
+            }
 
-            await modelCart.destroy({ where: { userId: result } });
-            return res.redirect(`http://localhost:5173/payment/${paymentId}`);
+            console.log('✅ Token:', token);
+            console.log('✅ PayerID:', PayerID);
+
+            // Capture the order
+            console.log('📤 Sending capture request to PayPal...');
+            const request = new paypal.orders.OrdersCaptureRequest(token);
+            request.requestBody({});
+
+            const capture = await paypalClient.client().execute(request);
+            console.log('✅ PayPal Capture Response Status:', capture.result.status);
+            console.log('📦 Full capture result:', JSON.stringify(capture.result, null, 2));
+
+            if (capture.result.status === 'COMPLETED') {
+                // Lấy thông tin custom_id từ captures (PayPal trả về ở đây, không phải purchase_units trực tiếp)
+                const customId = capture.result.purchase_units[0].payments.captures[0].custom_id;
+                console.log('🔑 Custom ID:', customId);
+
+                if (!customId) {
+                    console.log('❌ No custom_id found in PayPal response');
+                    console.log(
+                        '📦 Purchase units structure:',
+                        JSON.stringify(capture.result.purchase_units[0], null, 2),
+                    );
+                    return res.redirect('http://localhost:5173/cart?payment=failed');
+                }
+
+                const [userId, paymentId] = customId.split('|');
+                console.log('👤 User ID:', userId);
+                console.log('🆔 Payment ID:', paymentId);
+
+                const findCart = await modelCart.findAll({ where: { userId: userId } });
+                console.log('🛒 Cart items found:', findCart.length);
+
+                if (findCart.length > 0) {
+                    console.log('💾 Creating payment records...');
+                    // Tạo payments trong database
+                    const paymentPromises = findCart.map((item) => {
+                        return modelPayments.create({
+                            userId: item.userId,
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            fullName: item.fullName,
+                            phone: item.phone,
+                            address: item.address,
+                            totalPrice: findCart.reduce((total, item) => total + item.totalPrice, 0),
+                            status: 'pending',
+                            typePayment: 'PAYPAL',
+                            idPayment: paymentId,
+                        });
+                    });
+
+                    await Promise.all(paymentPromises);
+                    console.log('✅ Payment records created successfully');
+
+                    // Xóa giỏ hàng sau khi thanh toán thành công
+                    const deletedCount = await modelCart.destroy({ where: { userId: userId } });
+                    console.log('🗑️ Cart cleared successfully - Deleted items:', deletedCount);
+
+                    console.log('🎉 Redirecting to success page: /payment/' + paymentId);
+                    return res.redirect(`http://localhost:5173/payment/${paymentId}`);
+                } else {
+                    console.log('⚠️ No cart items found for userId:', userId);
+                    console.log('ℹ️ This might be normal if cart was already processed');
+                    // Vẫn redirect về success vì thanh toán đã hoàn tất
+                    return res.redirect(`http://localhost:5173/payment/${paymentId}`);
+                }
+            } else {
+                console.log('❌ PayPal status not COMPLETED:', capture.result.status);
+            }
+
+            return res.redirect('http://localhost:5173/cart?payment=failed');
+        } catch (error) {
+            console.error('💥 ===== PayPal Capture Error =====');
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            if (error.response) {
+                console.error('PayPal API Response:', JSON.stringify(error.response, null, 2));
+            }
+            return res.redirect('http://localhost:5173/cart?payment=failed');
         }
     }
 
