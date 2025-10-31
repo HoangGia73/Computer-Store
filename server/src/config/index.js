@@ -1,10 +1,10 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const connect = new Sequelize('computer', 'root', '123123tem', {
-    host: 'localhost',
+const connect = new Sequelize('royal123_computer', 'royal123', 'Giaiu123@', {
+    host: 'mysql-royal123.alwaysdata.net',
     dialect: 'mysql',
-    port: process.env.MYSQL_PORT,
+    port: 3306,
 });
 
 const connectDB = async () => {
