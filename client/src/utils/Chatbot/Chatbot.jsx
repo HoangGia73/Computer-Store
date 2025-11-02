@@ -1,48 +1,69 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './Chatbot.module.scss';
 import { requestChatbot } from '../../config/request';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faComments, faTimes } from '@fortawesome/free-solid-svg-icons';
 
+const INITIAL_BOT_MESSAGE = {
+    text: 'Xin chào! Tôi là trợ lý bán hàng. Tôi có thể giúp gì cho bạn?',
+    sender: 'bot',
+};
+
 const Chatbot = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState([
-        { text: 'Xin chào! Tôi là trợ lý bán hàng. Tôi có thể giúp gì cho bạn?', sender: 'bot' },
-    ]);
+    const [messages, setMessages] = useState([INITIAL_BOT_MESSAGE]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [conversationId, setConversationId] = useState(null);
     const messagesEndRef = useRef(null);
 
-    const scrollToBottom = () => {
+    const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+    }, []);
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
+    }, [messages, scrollToBottom]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (inputMessage.trim() && !isLoading) {
-            const userMessage = inputMessage.trim();
-            setMessages((prev) => [...prev, { text: userMessage, sender: 'user' }]);
-            setInputMessage('');
-            setIsLoading(true);
+        if (!inputMessage.trim() || isLoading) {
+            return;
+        }
 
-            try {
-                const response = await requestChatbot({ question: userMessage });
-                setMessages((prev) => [...prev, { text: response, sender: 'bot' }]);
-            } catch (error) {
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        text: 'Xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau.',
-                        sender: 'bot',
-                    },
-                ]);
-            } finally {
-                setIsLoading(false);
+        const userMessage = inputMessage.trim();
+        setMessages((prev) => [...prev, { text: userMessage, sender: 'user' }]);
+        setInputMessage('');
+        setIsLoading(true);
+
+        try {
+            const payload = conversationId
+                ? { question: userMessage, conversationId }
+                : { question: userMessage };
+            const response = await requestChatbot(payload);
+
+            if (response?.conversationId && response.conversationId !== conversationId) {
+                setConversationId(response.conversationId);
             }
+
+            const answer = response?.answer?.trim();
+            setMessages((prev) => [
+                ...prev,
+                {
+                    text: answer || 'Xin lỗi, tôi chưa có thông tin chính xác cho câu hỏi này.',
+                    sender: 'bot',
+                },
+            ]);
+        } catch (error) {
+            setMessages((prev) => [
+                ...prev,
+                {
+                    text: 'Xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau.',
+                    sender: 'bot',
+                },
+            ]);
+        } finally {
+            setIsLoading(false);
         }
     };
 

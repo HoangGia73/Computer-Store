@@ -73,7 +73,7 @@ function LoginUser() {
                         ]}
                     >
                         <Input prefix={<UserOutlined />} placeholder="Email" size="large" />
-</Form.Item>
+                    </Form.Item>
 
                     <Form.Item
                         name="password"
@@ -89,7 +89,7 @@ function LoginUser() {
 
                     <Form.Item>
                         <Button
-                            onClick={onFinish}
+                            // onClick={onFinish}
                             type="primary"
                             htmlType="submit"
                             className={cx('login-button')}

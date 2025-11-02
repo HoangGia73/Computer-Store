@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const app = express();
 const port = 3000;
 
@@ -21,10 +22,36 @@ app.use(cookieParser());
 connectDB();
 syncDatabase();
 
+const conversationStore = new Map();
+
 app.post('/api/chat', async (req, res) => {
-    const { question } = req.body;
-    const data = await askQuestion(question);
-    return res.status(200).json(data);
+    try {
+        const { question, conversationId } = req.body;
+
+        if (!question || typeof question !== 'string' || !question.trim()) {
+            return res.status(400).json({ success: false, message: 'Câu hỏi không hợp lệ.' });
+        }
+
+        let key = conversationId || req.cookies.conversationId;
+
+        if (!key) {
+            key = crypto.randomUUID();
+            res.cookie('conversationId', key, { httpOnly: false, sameSite: 'lax' });
+        }
+
+        const previousHistory = conversationStore.get(key) || [];
+        const { answer, history } = await askQuestion(question, previousHistory);
+
+        conversationStore.set(key, history);
+
+        return res.status(200).json({ answer, conversationId: key });
+    } catch (error) {
+        console.error('Chat API error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi server',
+        });
+    }
 });
 
 routes(app);
