@@ -1,10 +1,16 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const connect = new Sequelize('royal123_computer', 'royal123', 'Giaiu123@', {
-    host: 'mysql-royal123.alwaysdata.net',
+const dbName = process.env.DB_NAME || 'royal123_computer';
+const dbUser = process.env.DB_USER || 'royal123';
+const dbPassword = process.env.DB_PASSWORD || 'Giaiu123@';
+const dbHost = process.env.DB_HOST || 'mysql-royal123.alwaysdata.net';
+const dbPort = process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306;
+
+const connect = new Sequelize(dbName, dbUser, dbPassword, {
+    host: dbHost,
     dialect: 'mysql',
-    port: 3306,
+    port: dbPort,
 });
 
 const connectDB = async () => {

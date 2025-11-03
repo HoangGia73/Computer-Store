@@ -4,7 +4,7 @@ import { UserOutlined, ShoppingCartOutlined, DollarOutlined, EyeOutlined } from 
 import { Column, Pie } from '@ant-design/charts';
 import styles from './DashBoard.module.scss';
 import classNames from 'classnames/bind';
-import { requestDashboard, requestGetOrderStats } from '../../../../config/request';
+import { requestDashboard, requestGetOrderStats, API_BASE_URL } from '../../../../config/request';
 import axios from 'axios';
 
 const { Title } = Typography;
@@ -73,7 +73,7 @@ function DashBoard() {
 
         const fetchPieChartData = async () => {
             try {
-                const response = await axios.get('http://localhost:3000/api/users/pie-chart');
+                const response = await axios.get(`${API_BASE_URL}/api/users/pie-chart`, { withCredentials: true });
                 const { categoryStats, orderStats } = response.data.metadata;
                 setCategoryStats(categoryStats);
                 setOrderStatusStats(orderStats);

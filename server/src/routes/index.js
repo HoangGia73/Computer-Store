@@ -9,6 +9,7 @@ const contactRoutes = require('./contact.routes');
 const multer = require('multer');
 const path = require('path');
 
+// --- Cấu hình multer upload ---
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'src/uploads/images');
@@ -18,9 +19,10 @@ const storage = multer.diskStorage({
     },
 });
 
-var upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 function routes(app) {
+    // --- User ---
     app.post('/api/register', userRoutes);
     app.post('/api/login', userRoutes);
     app.get('/api/auth', userRoutes);
@@ -38,7 +40,7 @@ function routes(app) {
     app.get('/api/users/pie-chart', userRoutes);
     app.delete('/api/delete-user/:id', userRoutes);
 
-    ///// product
+    // --- Product ---
     app.post('/api/create-product', productRoutes);
     app.get('/api/get-products', productRoutes);
     app.post('/api/update-product', productRoutes);
@@ -57,7 +59,7 @@ function routes(app) {
     app.get('/api/get-product-search', productRoutes);
     app.get('/api/get-product-search-by-category', productRoutes);
 
-    //// category
+    // --- Category ---
     app.post('/api/create-category', categoryRoutes);
     app.get('/api/get-all-category', categoryRoutes);
     app.delete('/api/delete-category', categoryRoutes);
@@ -65,7 +67,7 @@ function routes(app) {
     app.get('/api/get-category-by-component-types', categoryRoutes);
     app.get('/api/get-all-products', categoryRoutes);
 
-    //// cart
+    // --- Cart ---
     app.post('/api/add-to-cart', cartRoutes);
     app.get('/api/get-cart', cartRoutes);
     app.post('/api/delete-cart', cartRoutes);
@@ -74,7 +76,8 @@ function routes(app) {
     app.post('/api/update-quantity', cartRoutes);
     app.get('/api/get-cart-build-pc', cartRoutes);
     app.post('/api/delete-all-cart-build-pc', cartRoutes);
-    ///// payments
+
+    // --- Payments ---
     app.post('/api/payments', paymentsRoutes);
     app.get('/api/check-payment-paypal', paymentsRoutes);
     app.get('/api/check-payment-vnpay', paymentsRoutes);
@@ -84,39 +87,48 @@ function routes(app) {
     app.get('/api/get-order-admin', paymentsRoutes);
     app.post('/api/update-order-status', paymentsRoutes);
 
-    //// product preview
+    // --- Product preview ---
     app.post('/api/create-product-preview', productPreviewRoutes);
     app.get('/api/get-product-preview-user', productPreviewRoutes);
 
-    //// blogs
+    // --- Blogs ---
     app.post('/api/create-blog', blogsRoutes);
     app.get('/api/get-blogs', blogsRoutes);
     app.delete('/api/delete-blog', blogsRoutes);
     app.get('/api/get-blog-by-id', blogsRoutes);
 
-    //// contact
+    // --- Contact ---
     app.post('/api/create-contact', contactRoutes);
     app.get('/api/get-contacts', contactRoutes);
 
+    // --- Upload 1 ảnh ---
     app.post('/api/upload', upload.single('image'), (req, res) => {
         const file = req.file;
         if (!file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
+
+        const host = req.get('host');
+        const protocol = req.protocol;
+
         res.json({
             message: 'Uploaded successfully',
-            image: `http://localhost:3000/uploads/images/${file.filename}`,
+            image: `${protocol}://${host}/uploads/images/${file.filename}`,
         });
     });
 
+    // --- Upload nhiều ảnh ---
     app.post('/api/uploads', upload.array('images'), (req, res) => {
-        const file = req.files;
-        if (!file) {
+        const files = req.files;
+        if (!files || files.length === 0) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
-        const images = file.map((file) => {
-            return `http://localhost:3000/uploads/images/${file.filename}`;
-        });
+
+        const host = req.get('host');
+        const protocol = req.protocol;
+
+        const images = files.map((file) => `${protocol}://${host}/uploads/images/${file.filename}`);
+
         res.json({
             message: 'Uploaded successfully',
             images,

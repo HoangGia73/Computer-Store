@@ -16,6 +16,20 @@ const { log } = require('util');
 const paypal = require('@paypal/checkout-server-sdk');
 const paypalClient = require('../config/paypal.config');
 
+require('dotenv').config();
+
+const defaultApiBaseUrl = 'http://localhost:3000';
+const defaultClientBaseUrl = 'http://localhost:5173';
+const appBaseUrl = process.env.API_BASE_URL || defaultApiBaseUrl;
+const clientBaseUrl = process.env.CLIENT_URL || defaultClientBaseUrl;
+const paypalReturnUrl = process.env.PAYPAL_RETURN_URL || `${appBaseUrl}/api/check-payment-paypal`;
+const paypalCancelUrl = process.env.PAYPAL_CANCEL_URL || `${clientBaseUrl}/cart?payment=cancelled`;
+const vnpReturnUrl = process.env.VNP_RETURN_URL || `${appBaseUrl}/api/check-payment-vnpay`;
+const vnpHost = process.env.VNP_HOST || 'https://sandbox.vnpayment.vn';
+const vnpTestMode = process.env.VNP_TEST_MODE ? process.env.VNP_TEST_MODE === 'true' : true;
+const vnpTmnCode = process.env.VNP_TMN_CODE || 'DH2F13SW';
+const vnpHashSecret = process.env.VNP_HASH_SECRET || '7VJPG70RGPOWFO47VSBT29WPDYND0EJG';
+
 /**
  * Hàm tạo mã ID thanh toán duy nhất
  * Format: PAY + timestamp + seconds + milliseconds
@@ -109,9 +123,9 @@ class PaymentsController {
                         landing_page: 'BILLING',
                         user_action: 'PAY_NOW',
                         // URL callback khi thanh toán thành công
-                        return_url: 'http://localhost:3000/api/check-payment-paypal',
+                        return_url: paypalReturnUrl,
                         // URL khi user hủy thanh toán
-                        cancel_url: 'http://localhost:5173/cart?payment=cancelled',
+                        cancel_url: paypalCancelUrl,
                     },
                 });
 
@@ -137,10 +151,10 @@ class PaymentsController {
 
         if (typePayment === 'VNPAY') {
             const vnpay = new VNPay({
-                tmnCode: 'DH2F13SW',
-                secureSecret: '7VJPG70RGPOWFO47VSBT29WPDYND0EJG',
-                vnpayHost: 'https://sandbox.vnpayment.vn',
-                testMode: true, // tùy chọn
+                tmnCode: vnpTmnCode,
+                secureSecret: vnpHashSecret,
+                vnpayHost: vnpHost,
+                testMode: vnpTestMode, // tùy chọn
                 hashAlgorithm: 'SHA512', // tùy chọn
                 loggerFn: ignoreLogger, // tùy chọn
             });
@@ -152,7 +166,7 @@ class PaymentsController {
                 vnp_TxnRef: `${findCart[0]?.userId} + ${paymentId}`, // Sử dụng paymentId thay vì singlePaymentId
                 vnp_OrderInfo: `${findCart[0]?.userId} `,
                 vnp_OrderType: ProductCode.Other,
-                vnp_ReturnUrl: `http://localhost:3000/api/check-payment-vnpay`, //
+                vnp_ReturnUrl: vnpReturnUrl, //
                 vnp_Locale: VnpLocale.VN, // 'vn' hoặc 'en'
                 vnp_CreateDate: dateFormat(new Date()), // tùy chọn, mặc định là hiện tại
                 vnp_ExpireDate: dateFormat(tomorrow), // tùy chọn
@@ -172,7 +186,7 @@ class PaymentsController {
 
             if (!token || !PayerID) {
                 console.log('❌ Missing required params - token:', token, 'PayerID:', PayerID);
-                return res.redirect('http://localhost:5173/cart?payment=failed');
+                return res.redirect(`${clientBaseUrl}/cart?payment=failed`);
             }
 
             console.log('✅ Token:', token);
@@ -198,7 +212,7 @@ class PaymentsController {
                         '📦 Purchase units structure:',
                         JSON.stringify(capture.result.purchase_units[0], null, 2),
                     );
-                    return res.redirect('http://localhost:5173/cart?payment=failed');
+                    return res.redirect(`${clientBaseUrl}/cart?payment=failed`);
                 }
 
                 const [userId, paymentId] = customId.split('|');
@@ -234,18 +248,18 @@ class PaymentsController {
                     console.log('🗑️ Cart cleared successfully - Deleted items:', deletedCount);
 
                     console.log('🎉 Redirecting to success page: /payment/' + paymentId);
-                    return res.redirect(`http://localhost:5173/payment/${paymentId}`);
+                    return res.redirect(`${clientBaseUrl}/payment/${paymentId}`);
                 } else {
                     console.log('⚠️ No cart items found for userId:', userId);
                     console.log('ℹ️ This might be normal if cart was already processed');
                     // Vẫn redirect về success vì thanh toán đã hoàn tất
-                    return res.redirect(`http://localhost:5173/payment/${paymentId}`);
+                    return res.redirect(`${clientBaseUrl}/payment/${paymentId}`);
                 }
             } else {
                 console.log('❌ PayPal status not COMPLETED:', capture.result.status);
             }
 
-            return res.redirect('http://localhost:5173/cart?payment=failed');
+            return res.redirect(`${clientBaseUrl}/cart?payment=failed`);
         } catch (error) {
             console.error('💥 ===== PayPal Capture Error =====');
             console.error('Error message:', error.message);
@@ -253,7 +267,7 @@ class PaymentsController {
             if (error.response) {
                 console.error('PayPal API Response:', JSON.stringify(error.response, null, 2));
             }
-            return res.redirect('http://localhost:5173/cart?payment=failed');
+            return res.redirect(`${clientBaseUrl}/cart?payment=failed`);
         }
     }
 
@@ -279,7 +293,7 @@ class PaymentsController {
             });
 
             await modelCart.destroy({ where: { userId: idCart } });
-            return res.redirect(`http://localhost:5173/payment/${paymentId}`);
+            return res.redirect(`${clientBaseUrl}/payment/${paymentId}`);
         }
     }
 
@@ -480,3 +494,4 @@ class PaymentsController {
 }
 
 module.exports = new PaymentsController();
+
