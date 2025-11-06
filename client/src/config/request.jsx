@@ -1,12 +1,50 @@
 import axios from 'axios';
-import cookies from 'js-cookie';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.shoppcm.shop'
 
 const request = axios.create({
     baseURL: API_BASE_URL,
     withCredentials: true,
 });
+
+const getAccessToken = () => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('token');
+};
+
+const getRefreshToken = () => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('refreshToken');
+};
+
+const persistTokens = ({ token, refreshToken }) => {
+    if (typeof window === 'undefined') return;
+    if (token) {
+        localStorage.setItem('token', token);
+    }
+    if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+    }
+};
+
+request.interceptors.request.use(
+    (config) => {
+        const token = getAccessToken();
+        if (token && !config.headers.Authorization) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+
+        if (config.url?.includes('/api/refresh-token')) {
+            const refreshToken = getRefreshToken();
+            if (refreshToken) {
+                config.headers['x-refresh-token'] = refreshToken;
+            }
+        }
+
+        return config;
+    },
+    (error) => Promise.reject(error),
+);
 
 export const requestGetProductSearchByCategory = async (params) => {
     console.log(params);
@@ -360,36 +398,45 @@ request.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        // Nếu lỗi 401 (Unauthorized) và request chưa từng thử refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
+            const shouldAttemptRefresh =
+                typeof window !== 'undefined' &&
+                localStorage.getItem('logged') === '1' &&
+                !originalRequest.url?.includes('/api/refresh-token');
+
+            if (!shouldAttemptRefresh) {
+                return Promise.reject(error);
+            }
+
             originalRequest._retry = true;
 
             if (!isRefreshing) {
                 isRefreshing = true;
 
                 try {
-                    // Gửi yêu cầu refresh token
-                    const token = cookies.get('logged');
-                    if (!token) {
-                        return;
+                    const refreshResponse = await requestRefreshToken();
+                    persistTokens(refreshResponse?.metadata || {});
+                    if (typeof window !== 'undefined') {
+                        localStorage.setItem('logged', '1');
                     }
-                    await requestRefreshToken();
 
-                    // Xử lý lại tất cả các request bị lỗi 401 trước đó
                     failedRequestsQueue.forEach((req) => req.resolve());
                     failedRequestsQueue = [];
                 } catch (refreshError) {
-                    // Nếu refresh thất bại, đăng xuất
                     failedRequestsQueue.forEach((req) => req.reject(refreshError));
                     failedRequestsQueue = [];
-                    localStorage.clear();
-                    window.location.href = '/login'; // Chuyển về trang đăng nhập
+                    if (typeof window !== 'undefined') {
+                        localStorage.removeItem('logged');
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('refreshToken');
+                    }
+                    window.location.href = '/login';
+                    throw refreshError;
                 } finally {
                     isRefreshing = false;
                 }
             }
 
-            // Trả về một Promise để retry request sau khi token mới được cập nhật
             return new Promise((resolve, reject) => {
                 failedRequestsQueue.push({
                     resolve: () => {

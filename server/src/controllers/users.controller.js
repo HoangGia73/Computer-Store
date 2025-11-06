@@ -26,9 +26,17 @@ const otpGenerator = require('otp-generator');
 require('dotenv').config();
 
 const isProduction = process.env.NODE_ENV === 'production';
+// Allow HTTP deployments to disable the secure cookie flag when COOKIE_SECURE=false
+const cookieSecureOverride = process.env.COOKIE_SECURE;
+const normalizedCookieSecure = typeof cookieSecureOverride === 'string' ? cookieSecureOverride.toLowerCase() : '';
+const serverUrl = process.env.SERVER_URL || '';
+const isExplicitHttp = serverUrl.startsWith('http://');
+const allowInsecureCookie = isExplicitHttp || ['false', '0', 'off'].includes(normalizedCookieSecure);
+const isSecureCookie = isProduction && !allowInsecureCookie;
 const baseCookieOptions = {
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: isSecureCookie,
+    sameSite: isSecureCookie ? 'none' : 'lax',
+    path: '/',
 };
 
 const ADMIN_POSITIONS = ['admin', 'warehouse_manager', 'staff'];
@@ -95,11 +103,11 @@ class controllerUser {
             throw new BadUserRequestError('Vui lòng nhập đầy đủ thông tin');
         }
         const findUser = await modelUser.findOne({ where: { email } });
-        if (findUser.typeLogin === 'google') {
-            return res.status(400).json({ message: 'Tài khoản đăng nhập bằng Google' });
-        }
         if (!findUser) {
             return res.status(400).json({ message: 'Tài khoản hoặc mật khẩu không chính xác' });
+        }
+        if (findUser.typeLogin === 'google') {
+            return res.status(400).json({ message: 'Tài khoản đăng nhập bằng Google' });
         }
         const isPasswordValid = bcrypt.compareSync(password, findUser.password);
         if (!isPasswordValid) {
@@ -157,7 +165,26 @@ class controllerUser {
     }
 
     async refreshToken(req, res) {
-        const refreshToken = req.cookies.refreshToken;
+        const headerToken = req.headers['x-refresh-token'];
+        const bearerHeader = req.headers.authorization;
+        let refreshToken = req.cookies.refreshToken;
+
+        if (!refreshToken && typeof headerToken === 'string' && headerToken.trim()) {
+            refreshToken = headerToken.trim();
+        }
+
+        if (
+            !refreshToken &&
+            typeof bearerHeader === 'string' &&
+            bearerHeader.startsWith('Bearer ') &&
+            bearerHeader.slice(7).trim()
+        ) {
+            refreshToken = bearerHeader.slice(7).trim();
+        }
+
+        if (!refreshToken) {
+            throw new BadUserRequestError('Vui lòng đăng nhập lại');
+        }
 
         const decoded = await verifyToken(refreshToken);
 
@@ -179,7 +206,7 @@ class controllerUser {
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngay
         });
 
-        new OK({ message: 'Refresh token thành công', metadata: { token } }).send(res);
+        new OK({ message: 'Refresh token thành công', metadata: { token, refreshToken } }).send(res);
     }
 
     async logout(req, res) {

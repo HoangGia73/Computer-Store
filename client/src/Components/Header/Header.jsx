@@ -4,17 +4,27 @@ import { useEffect, useState } from 'react';
 
 import { requestGetCategory, requestGetProductSearch, requestLogout } from '../../config/request';
 
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../hooks/useStore';
 import { Avatar, Dropdown } from 'antd';
-import { UserOutlined, ShoppingOutlined, LogoutOutlined, WindowsOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+    UserOutlined,
+    ShoppingOutlined,
+    LogoutOutlined,
+    WindowsOutlined,
+    SearchOutlined,
+    DownOutlined,
+} from '@ant-design/icons';
 
 import useDebounce from '../../hooks/useDebounce';
 
 const cx = classNames.bind(styles);
 
 function Header() {
+    const createMatchMediaState = () => (typeof window !== 'undefined' ? window.innerWidth > 768 : false);
     const [category, setCategory] = useState([]);
+    const [isMenuOpen, setIsMenuOpen] = useState(createMatchMediaState);
+    const [isDesktop, setIsDesktop] = useState(createMatchMediaState);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -27,6 +37,29 @@ function Header() {
     const { dataUser, dataCart } = useStore();
 
     const Navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        const handleResize = () => {
+            const desktop = window.innerWidth > 768;
+            setIsDesktop(desktop);
+            if (desktop) {
+                setIsMenuOpen(true);
+            } else {
+                setIsMenuOpen(false);
+            }
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    useEffect(() => {
+        if (!isDesktop) {
+            setIsMenuOpen(false);
+        }
+    }, [location.pathname, isDesktop]);
 
     const items = [
         {
@@ -46,6 +79,9 @@ function Header() {
             danger: true,
             onClick: async () => {
                 await requestLogout();
+                localStorage.removeItem('logged');
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -93,17 +129,84 @@ function Header() {
         setProductSearch([]);
     };
 
+    const renderCategoryLinks = () =>
+        category.map((item) => (
+            <Link
+                key={item.id}
+                to={`/category/${item.id}`}
+                onClick={() => {
+                    if (!isDesktop) {
+                        setIsMenuOpen(false);
+                    }
+                }}
+            >
+                <div className={cx('category-item')}>
+                    <img src={item.image} alt={item.name} />
+                    <span>{item.name}</span>
+                </div>
+            </Link>
+        ));
+
     return (
         <div className={cx('wrapper')}>
             <div className={cx('inner')}>
-                <Link to="/">
-                    <div>
-                        <img src="https://pcmarket.vn/static/assets/2021/images/logo-new.png" alt="" />
+                <div className={cx('inner-top')}>
+                    <Link to="/" className={cx('logo')}>
+                        <img src="https://pcmarket.vn/static/assets/2021/images/logo-new.png" alt="PC Market Logo" />
+                    </Link>
+                    {!isDesktop && (
+                        <div className={cx('mobile-actions')}>
+                            <Link to="/cart" className={cx('mobile-icon')}>
+                                <ShoppingOutlined style={{ fontSize: '20px' }} />
+                                {dataCart.length > 0 && (
+                                    <span className={cx('badge')}>
+                                        {dataCart.length > 99 ? '99+' : dataCart.length}
+                                    </span>
+                                )}
+                            </Link>
+                            {dataUser.id ? (
+                                <Dropdown menu={{ items }} placement="bottomRight" arrow>
+                                    <div className={cx('mobile-icon', 'user-icon')}>
+                                        {dataUser.avatar ? (
+                                            <Avatar src={dataUser.avatar} size={36} />
+                                        ) : (
+                                            <Avatar
+                                                size={36}
+                                                icon={<UserOutlined />}
+                                                style={{
+                                                    backgroundColor: '#87d068',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                </Dropdown>
+                            ) : (
+                                <Link to="/login" className={cx('mobile-icon', 'user-icon')}>
+                                    <UserOutlined style={{ fontSize: '20px' }} />
+                                </Link>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {!isDesktop && (
+                    <div className={cx('mobile-quick-links')}>
+                        <Link to="/contact" className={cx('quick-link')}>
+                            <WindowsOutlined />
+                            <span>Tư vấn build PC</span>
+                        </Link>
+                        <Link to="/buildpc" className={cx('quick-link')}>
+                            <WindowsOutlined />
+                            <span>Xây dựng cấu hình</span>
+                        </Link>
                     </div>
-                </Link>
+                )}
 
                 <div className={cx('search-container')}>
-                    <select name="" id="" onChange={(e) => setSelectedCategory(e.target.value)}>
+                    <select name="category" id="category" onChange={(e) => setSelectedCategory(e.target.value)}>
                         <option value="all">Tất cả danh mục</option>
                         {category.map((item) => (
                             <option key={item.id} value={item.id}>
@@ -134,7 +237,7 @@ function Header() {
                                 ) : (
                                     productSearch.map((item) => (
                                         <li key={item.id} onClick={() => handleSearchItemClick(item.id)}>
-                                            <img src={item.images.split(',')[0]} alt="" />
+                                            <img src={item.images.split(',')[0]} alt={item.name} />
                                             <div>
                                                 <h3>{item.name}</h3>
                                                 <p>
@@ -152,66 +255,76 @@ function Header() {
                         </div>
                     )}
                 </div>
-                {!dataUser.id ? (
-                    <div className={cx('auth-buttons')}>
-                        <Link to="/login">
-                            <button>Đăng nhập</button>
-                        </Link>
-                        <Link to="/register">
-                            <button>Đăng ký</button>
-                        </Link>
-                    </div>
-                ) : (
-                    <div className={cx('user-menu')}>
-                        <div>
-                            <Link to="/contact" className={cx('cart-button')}>
-                                <WindowsOutlined style={{ fontSize: '24px' }} />
-                                Tư vấn build pc
+                {isDesktop &&
+                    (!dataUser.id ? (
+                        <div className={cx('auth-buttons')}>
+                            <Link to="/login">
+                                <button>Đăng nhập</button>
+                            </Link>
+                            <Link to="/register">
+                                <button>Đăng ký</button>
                             </Link>
                         </div>
-                        <div className={cx('cart-menu')}>
-                            <Link to="/buildpc" className={cx('cart-button')}>
-                                <WindowsOutlined style={{ fontSize: '24px' }} />
-                                Xây dựng cấu hình
-                            </Link>
-
-                            <Link to="/cart" className={cx('cart-button')}>
-                                <ShoppingOutlined style={{ fontSize: '24px' }} />
-                                Giỏ hàng ({dataCart.length})
-                            </Link>
-                        </div>
-                        <Dropdown menu={{ items }} placement="bottomRight" arrow>
-                            <div className={cx('user-avatar')}>
-                                {dataUser.avatar ? (
-                                    <Avatar src={dataUser.avatar} size={40} />
-                                ) : (
-                                    <Avatar
-                                        size={40}
-                                        icon={<UserOutlined />}
-                                        style={{
-                                            backgroundColor: '#87d068',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                        }}
-                                    />
-                                )}
-                                <span>{dataUser.fullName || 'Người dùng'}</span>
+                    ) : (
+                        <div className={cx('user-menu')}>
+                            <div>
+                                <Link to="/contact" className={cx('cart-button')}>
+                                    <WindowsOutlined style={{ fontSize: '24px' }} />
+                                    Tư vấn build PC
+                                </Link>
                             </div>
-                        </Dropdown>
-                    </div>
-                )}
-            </div>
-            <div className={cx('category-list')}>
-                {category.map((item) => (
-                    <Link key={item.id} to={`/category/${item.id}`}>
-                        <div className={cx('category-item')}>
-                            <img src={item.image} alt="" />
-                            <span>{item.name}</span>
+                            <div className={cx('cart-menu')}>
+                                <Link to="/buildpc" className={cx('cart-button')}>
+                                    <WindowsOutlined style={{ fontSize: '24px' }} />
+                                    Xây dựng cấu hình
+                                </Link>
+
+                                <Link to="/cart" className={cx('cart-button')}>
+                                    <ShoppingOutlined style={{ fontSize: '24px' }} />
+                                    Giỏ hàng ({dataCart.length})
+                                </Link>
+                            </div>
+                            <Dropdown menu={{ items }} placement="bottomRight" arrow>
+                                <div className={cx('user-avatar')}>
+                                    {dataUser.avatar ? (
+                                        <Avatar src={dataUser.avatar} size={40} />
+                                    ) : (
+                                        <Avatar
+                                            size={40}
+                                            icon={<UserOutlined />}
+                                            style={{
+                                                backgroundColor: '#87d068',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        />
+                                    )}
+                                    <span>{dataUser.fullName || 'Người dùng'}</span>
+                                </div>
+                            </Dropdown>
                         </div>
-                    </Link>
-                ))}
+                    ))}
             </div>
+            {isDesktop ? (
+                <div className={cx('category-list', 'desktop')}>{renderCategoryLinks()}</div>
+            ) : (
+                <div className={cx('category-bar')}>
+                    <button
+                        type="button"
+                        className={cx('category-toggle')}
+                        onClick={() => setIsMenuOpen((prev) => !prev)}
+                        aria-expanded={isMenuOpen}
+                        aria-controls="header-category-menu"
+                    >
+                        <span>Danh muc san pham</span>
+                        <DownOutlined className={cx('category-toggle-icon', { open: isMenuOpen })} />
+                    </button>
+                    <div id="header-category-menu" className={cx('category-list', { open: isMenuOpen })}>
+                        {renderCategoryLinks()}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

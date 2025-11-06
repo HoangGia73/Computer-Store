@@ -41,6 +41,7 @@
     justify-content: space-between;
     gap: 30px;
     margin-top: 30px;
+    flex-wrap: wrap;
 }
 
 .showroom-item {
@@ -99,6 +100,8 @@
     justify-content: space-between;
     border-top: 1px solid rgba(255, 255, 255, 0.2);
     padding-top: 30px;
+    gap: 30px;
+    flex-wrap: wrap;
 }
 
 .footer-section {
@@ -168,4 +171,72 @@
 
 .certification img {
     max-width: 120px;
+}
+
+@media (max-width: 992px) {
+    .showroom-list {
+        justify-content: center;
+    }
+
+    .showroom-item {
+        max-width: 100%;
+    }
+
+    .footer-section {
+        flex: 1 1 45%;
+        padding: 0 10px;
+    }
+
+    .certification {
+        text-align: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .showroom-title {
+        font-size: 24px;
+    }
+
+    .showroom-list {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .showroom-header {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .showroom-info {
+        padding-left: 0;
+        text-align: left;
+    }
+
+    .footer-sections {
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .footer-section {
+        flex: 1 1 auto;
+        padding: 0;
+    }
+
+    .certification {
+        text-align: left;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding: 0 10px;
+    }
+
+    .showroom-title {
+        font-size: 20px;
+    }
+
+    .section-title {
+        font-size: 15px;
+    }
 }

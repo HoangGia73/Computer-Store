@@ -27,6 +27,12 @@
     }
 }
 
+.quantity-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
 .selected-product {
     .product-info {
         padding: 0 16px;
@@ -60,4 +66,36 @@
     margin-top: 24px;
     padding-top: 24px;
     border-top: 1px solid #f0f0f0;
+}
+
+@media (max-width: 768px) {
+    .description {
+        font-size: 14px;
+    }
+
+    .component-row {
+        padding: 12px 0;
+    }
+
+    .actions {
+        text-align: left;
+    }
+
+    .choose-button {
+        width: 100%;
+    }
+
+    .quantity-row {
+        justify-content: flex-start;
+        gap: 12px;
+
+        :global(.ant-input-number) {
+            width: 100%;
+            max-width: 120px;
+        }
+
+        :global(.ant-btn-link) {
+            padding: 0 12px;
+        }
+    }
 }

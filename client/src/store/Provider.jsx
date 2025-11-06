@@ -1,7 +1,6 @@
 import Context from './Context';
 import CryptoJS from 'crypto-js';
 
-import cookies from 'js-cookie';
 
 import { useEffect, useState } from 'react';
 import { requestGetCategory, requestAuth, requestGetCart } from '../config/request';
@@ -24,6 +23,7 @@ export function Provider({ children }) {
             setDataUser(user);
         } catch (error) {
             console.error('Auth error:', error);
+            setDataUser({});
         }
     };
 
@@ -36,11 +36,6 @@ export function Provider({ children }) {
 
     const fetchCart = async () => {
         try {
-            const token = cookies.get('logged');
-            if (!token) {
-                setDataCart([]);
-                return;
-            }
             const res = await requestGetCart();
             setDataCart(res.metadata || []);
         } catch (error) {
@@ -50,9 +45,14 @@ export function Provider({ children }) {
     };
 
     useEffect(() => {
-        const token = cookies.get('logged');
+        const hasSession =
+            typeof window !== 'undefined' &&
+            localStorage.getItem('logged') === '1' &&
+            localStorage.getItem('token');
 
-        if (!token) {
+        if (!hasSession) {
+            setDataUser({});
+            setDataCart([]);
             return;
         }
         fetchAuth();

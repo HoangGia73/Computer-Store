@@ -6,7 +6,7 @@ import classNames from 'classnames/bind';
 import styles from './Index.module.scss';
 import Header from '../../Components/Header/Header';
 
-// Import các components
+// Import c├íc components
 import InfoUser from './Components/InfoUser/InfoUser';
 import ManagerOrder from './Components/ManagerOrder/ManagerOrder';
 import ManagerProductWatch from './Components/ManagerProductWatch/ManagerProductWatch';
@@ -32,8 +32,10 @@ function Index() {
 
     const handleMenuClick = (key, component) => {
         if (key === 'logout') {
-            // Xử lý logout
+            // Xß╗¡ l├╜ logout
+            localStorage.removeItem('logged');
             localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
             navigate('/login');
             return;
         }
@@ -42,6 +44,9 @@ function Index() {
 
     const handleLogout = async () => {
         await requestLogout();
+        localStorage.removeItem('logged');
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         setTimeout(() => {
             window.location.reload();
         }, 1000);
@@ -52,25 +57,25 @@ function Index() {
         {
             key: 'profile',
             icon: <UserOutlined />,
-            label: 'Thông tin cá nhân',
+            label: 'Th├┤ng tin c├í nh├ón',
             onClick: () => handleMenuClick('profile', <InfoUser />),
         },
         {
             key: 'orders',
             icon: <ShoppingOutlined />,
-            label: 'Đơn hàng của tôi',
+            label: '─É╞ín h├áng cß╗ºa t├┤i',
             onClick: () => handleMenuClick('orders', <ManagerOrder />),
         },
         {
             key: 'wishlist',
             icon: <HeartOutlined />,
-            label: 'Sản phẩm đã xem',
+            label: 'Sß║ún phß║⌐m ─æ├ú xem',
             onClick: () => handleMenuClick('wishlist', <ManagerProductWatch />),
         },
         {
             key: 'logout',
             icon: <LogoutOutlined />,
-            label: 'Đăng xuất',
+            label: '─É─âng xuß║Ñt',
             onClick: () => handleLogout('logout'),
         },
     ];

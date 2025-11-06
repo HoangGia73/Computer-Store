@@ -210,9 +210,8 @@ function CategoryComponentFilter({ onChange, categoryId, filters, selectedIds = 
                 <Collapse defaultActiveKey={[]}>
                     {sortedComponentGroups.map((group) => (
                         <Panel
-                            header={`${componentTypeLabels[group.type] || group.type} (${
-                                group.components?.length || 0
-                            })`}
+                            header={`${componentTypeLabels[group.type] || group.type} (${group.components?.length || 0
+                                })`}
                             key={group.type}
                         >
                             <Input

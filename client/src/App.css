@@ -19,3 +19,55 @@
     margin: 0px auto;
     padding-top: 40px;
 }
+
+@media (max-width: 768px) {
+    .main {
+        width: 95%;
+        padding-top: 24px;
+    }
+}
+
+.contact-info-card .payment-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.contact-info-card .payment-section .ant-divider {
+    margin: 18px 0;
+}
+
+.contact-info-card .payment-section .ant-typography {
+    margin-bottom: 0;
+}
+
+.contact-info-card .payment-section .ant-typography + .ant-typography {
+    margin-top: 0;
+}
+
+.contact-info-card .payment-section > .ant-typography:last-child {
+    margin-bottom: 0;
+    line-height: 1.6;
+}
+
+.contact-info-card .contact-address-list {
+    gap: 16px !important;
+}
+
+.contact-info-card .contact-address-list .ant-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.contact-info-card .contact-address-list .ant-space {
+    gap: 6px !important;
+}
+
+.contact-info-card .contact-links {
+    gap: 12px !important;
+}
+
+.contact-info-card .contact-links .ant-space {
+    gap: 6px !important;
+}

@@ -8,11 +8,26 @@ const asyncHandler = (fn) => {
     };
 };
 
+const extractAccessToken = (req) => {
+    if (req.cookies?.token) return req.cookies.token;
+
+    const authHeader = req.headers.authorization;
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+        return authHeader.slice(7);
+    }
+
+    const headerToken = req.headers['x-access-token'];
+    if (typeof headerToken === 'string' && headerToken.trim()) {
+        return headerToken.trim();
+    }
+
+    return null;
+};
+
 const authUser = async (req, res, next) => {
     try {
-        const user = req.cookies.token;
-        if (!user) throw new BadUserRequestError('Vui lòng đăng nhập');
-        const token = user;
+        const token = extractAccessToken(req);
+        if (!token) throw new BadUserRequestError('Vui lòng đăng nhập');
         const decoded = await verifyToken(token);
         req.user = decoded;
         next();
@@ -23,9 +38,8 @@ const authUser = async (req, res, next) => {
 
 const authAdmin = async (req, res, next) => {
     try {
-        const user = req.cookies.token;
-        if (!user) throw new BadUserRequestError('Bạn không có quyền truy cập');
-        const token = user;
+        const token = extractAccessToken(req);
+        if (!token) throw new BadUserRequestError('Bạn không có quyền truy cập');
         const decoded = await verifyToken(token);
         const { id } = decoded;
         const findUser = await modelUser.findOne({ where: { id } });

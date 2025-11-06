@@ -1,13 +1,13 @@
-import classNames from 'classnames/bind';
-import styles from './LoginUser.module.scss';
-import Header from '../../Components/Header/Header';
-import { Form, Input, Button, Row, Col, message } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { Link, useNavigate } from 'react-router-dom';
-import { requestLogin, requestLoginGoogle } from '../../config/request';
+import classNames from "classnames/bind";
+import styles from "./LoginUser.module.scss";
+import Header from "../../Components/Header/Header";
+import { Form, Input, Button, Row, Col, message } from "antd";
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { Link, useNavigate } from "react-router-dom";
+import { requestLogin, requestLoginGoogle } from "../../config/request";
 
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
-import Footer from '../../Components/Footer/Footer';
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import Footer from "../../Components/Footer/Footer";
 
 const cx = classNames.bind(styles);
 
@@ -15,20 +15,28 @@ function LoginUser() {
     const navigate = useNavigate();
     const onFinish = async (values) => {
         try {
-            await requestLogin(values);
-            message.success('Đăng nhập thành công!');
+            const res = await requestLogin(values);
+            const { token, refreshToken } = res?.metadata || {};
+            if (token) {
+                localStorage.setItem("token", token);
+            }
+            if (refreshToken) {
+                localStorage.setItem("refreshToken", refreshToken);
+            }
+            localStorage.setItem("logged", "1");
+            message.success("Đăng nhập thành công!");
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
-            navigate('/');
+            navigate("/");
         } catch (error) {
-            console.log('Login error:', error);
+            console.log("Login error:", error);
             if (error.response && error.response.data && error.response.data.message) {
                 message.error(error.response.data.message);
             } else if (error.response && error.response.data && error.response.data.error) {
                 message.error(error.response.data.error);
             } else {
-                message.error('Đăng nhập thất bại. Vui lòng thử lại!');
+                message.error("Đăng nhập thất bại. Vui lòng thử lại!");
             }
         }
     };
@@ -37,38 +45,46 @@ function LoginUser() {
         const { credential } = response; // Nhận ID Token từ Google
         try {
             const res = await requestLoginGoogle(credential);
+            const { token, refreshToken } = res?.metadata || {};
+            if (token) {
+                localStorage.setItem("token", token);
+            }
+            if (refreshToken) {
+                localStorage.setItem("refreshToken", refreshToken);
+            }
+            localStorage.setItem("logged", "1");
             message.success(res.message);
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
-            navigate('/');
+            navigate("/");
         } catch (error) {
             if (error.response && error.response.data && error.response.data.message) {
                 message.error(error.response.data.message);
             } else {
-                message.error('Đăng nhập bằng Google thất bại. Vui lòng thử lại!');
+                message.error("Đăng nhập bằng Google thất bại. Vui lòng thử lại!");
             }
         }
     };
 
     return (
-        <div className={cx('wrapper')}>
+        <div className={cx("wrapper")}>
             <header>
                 <Header />
             </header>
-            <div className={cx('inner')}>
-                <Form name="login-form" className={cx('login-form')} onFinish={onFinish}>
+            <div className={cx("inner")}>
+                <Form name="login-form" className={cx("login-form")} onFinish={onFinish}>
                     <h2>Đăng nhập</h2>
                     <Form.Item
                         name="email"
                         rules={[
                             {
                                 required: true,
-                                message: 'Vui lòng nhập email!',
+                                message: "Vui lòng nhập email!",
                             },
                             {
-                                type: 'email',
-                                message: 'Email không hợp lệ!',
+                                type: "email",
+                                message: "Email không hợp lệ!",
                             },
                         ]}
                     >
@@ -80,7 +96,7 @@ function LoginUser() {
                         rules={[
                             {
                                 required: true,
-                                message: 'Vui lòng nhập mật khẩu!',
+                                message: "Vui lòng nhập mật khẩu!",
                             },
                         ]}
                     >
@@ -88,33 +104,26 @@ function LoginUser() {
                     </Form.Item>
 
                     <Form.Item>
-                        <Button
-                            // onClick={onFinish}
-                            type="primary"
-                            htmlType="submit"
-                            className={cx('login-button')}
-                            size="large"
-                            block
-                        >
+                        <Button type="primary" htmlType="submit" className={cx("login-button")} size="large" block>
                             Đăng nhập
                         </Button>
                     </Form.Item>
 
                     <GoogleOAuthProvider clientId={import.meta.env.VITE_CLIENT_ID}>
-                        <GoogleLogin onSuccess={handleSuccess} onError={() => console.log('Login Failed')} />
+                        <GoogleLogin onSuccess={handleSuccess} onError={() => console.log("Login Failed")} />
                     </GoogleOAuthProvider>
 
-                    <div className={cx('form-footer')}>
+                    <div className={cx("form-footer")}>
                         <Row justify="space-between" align="middle">
                             <Col>
-                                <Link to="/forgot-password" className={cx('forgot-password')}>
+                                <Link to="/forgot-password" className={cx("forgot-password")}>
                                     Quên mật khẩu?
                                 </Link>
                             </Col>
                             <Col>
-                                <span className={cx('register-text')}>
-                                    Chưa có tài khoản?{' '}
-                                    <Link to="/register" className={cx('register-link')}>
+                                <span className={cx("register-text")}>
+                                    Chưa có tài khoản?{" "}
+                                    <Link to="/register" className={cx("register-link")}>
                                         Đăng ký ngay
                                     </Link>
                                 </span>

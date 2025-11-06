@@ -8,7 +8,7 @@ const blogsRoutes = require('./blogs.routes');
 const contactRoutes = require('./contact.routes');
 const multer = require('multer');
 const path = require('path');
-
+const SERVER_URL = process.env.SERVER_URL || 'http://13.251.105.137';
 // --- Cấu hình multer upload ---
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -108,12 +108,9 @@ function routes(app) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
-        const host = req.get('host');
-        const protocol = req.protocol;
-
         res.json({
             message: 'Uploaded successfully',
-            image: `${protocol}://${host}/uploads/images/${file.filename}`,
+            image: `${SERVER_URL}/uploads/images/${file.filename}`,
         });
     });
 
@@ -121,13 +118,10 @@ function routes(app) {
     app.post('/api/uploads', upload.array('images'), (req, res) => {
         const files = req.files;
         if (!files || files.length === 0) {
-            return res.status(400).json({ message: 'No file uploaded' });
+            return res.status(400).json({ message: 'No files uploaded' });
         }
 
-        const host = req.get('host');
-        const protocol = req.protocol;
-
-        const images = files.map((file) => `${protocol}://${host}/uploads/images/${file.filename}`);
+        const images = files.map((file) => `${SERVER_URL}/uploads/images/${file.filename}`);
 
         res.json({
             message: 'Uploaded successfully',

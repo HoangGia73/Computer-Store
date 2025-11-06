@@ -20,6 +20,43 @@ const settings = {
     slidesToScroll: 1,
     autoplay: true, // Thêm dòng này
     autoplaySpeed: 3000, // Và dòng này (3 giây chuyển 1 lần)
+    responsive: [
+        {
+            breakpoint: 1600,
+            settings: {
+                slidesToShow: 5,
+                slidesToScroll: 1,
+            },
+        },
+        {
+            breakpoint: 1280,
+            settings: {
+                slidesToShow: 4,
+                slidesToScroll: 1,
+            },
+        },
+        {
+            breakpoint: 1024,
+            settings: {
+                slidesToShow: 3,
+                slidesToScroll: 1,
+            },
+        },
+        {
+            breakpoint: 768,
+            settings: {
+                slidesToShow: 2,
+                slidesToScroll: 1,
+            },
+        },
+        {
+            breakpoint: 520,
+            settings: {
+                slidesToShow: 1,
+                slidesToScroll: 1,
+            },
+        },
+    ],
 };
 const cx = classNames.bind(styles);
 
@@ -97,16 +134,12 @@ function HomePage() {
             </div>
 
             <div className={cx('hot-sale')}>
-                <div>
-                    <img
-                        style={{ width: '20%', height: '50px' }}
-                        src="https://pcmarket.vn/static/assets/2021/images/hot-sale-cuoi-tuan-1.gif"
-                        alt=""
-                    />
+                <div className={cx('hot-sale-banner')}>
+                    <img src="https://pcmarket.vn/static/assets/2021/images/hot-sale-cuoi-tuan-1.gif" alt="Hot sale banner" />
                 </div>
                 <Slider {...settings}>
                     {productHotSale.map((product) => (
-                        <div className={cx('hot-sale-item')}>
+                        <div className={cx('hot-sale-item')} key={product.id}>
                             <CardBody product={product} />
                         </div>
                     ))}
@@ -115,15 +148,15 @@ function HomePage() {
 
             <div className={cx('category-list')}>
                 {category.map((item) => (
-                    <div>
-                        <div className={cx('category-item')} key={item.id}>
+                    <div key={item.id}>
+                        <div className={cx('category-item')}>
                             <h2>{item.category.name}</h2>
                             <button onClick={() => navigate(`/category/${item.category.id}`)}>Xem tất cả</button>
                         </div>
                         <div className={cx('slider-container')}>
                             <Slider {...settings}>
                                 {item.products.map((product) => (
-                                    <div>
+                                    <div key={product.id}>
                                         <CardBody product={product} />
                                     </div>
                                 ))}

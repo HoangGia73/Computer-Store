@@ -110,85 +110,63 @@ function BuildPc() {
         }
     };
 
-    const columns = [
-        {
-            title: 'Hình ảnh',
-            dataIndex: 'images',
-            key: 'images',
-            width: 100,
-            render: (images) => <img src={images?.split(',')[0]} width={100} />,
-        },
-        {
-            title: 'Tên sản phẩm',
-            dataIndex: 'name',
-            key: 'name',
-        },
-
-        {
-            title: 'Giá',
-            dataIndex: 'price',
-            key: 'price',
-            sorter: true,
-            sortOrder: sortOrder,
-            render: (price) => price.toLocaleString() + ' đ',
-        },
-        {
-            title: 'Thao tác',
-            key: 'action',
-            render: (_, record) => (
-                <Button type="primary" onClick={() => handleSelectProduct(record)}>
-                    Chọn
-                </Button>
-            ),
-        },
-    ];
-
-    const pcComponents = [
-        { id: 1, name: 'CPU', buttonText: 'Chọn CPU', type: 'cpu' },
-        { id: 2, name: 'Mainboard', buttonText: 'Chọn Mainboard', type: 'mainboard' },
-        { id: 3, name: 'RAM', buttonText: 'Chọn RAM', type: 'ram' },
-        { id: 4, name: 'HDD', buttonText: 'Chọn HDD', type: 'hdd' },
-        { id: 5, name: 'SSD', buttonText: 'Chọn SSD', type: 'ssd' },
-        { id: 6, name: 'VGA', buttonText: 'Chọn VGA', type: 'vga' },
-        { id: 7, name: 'Nguồn', buttonText: 'Chọn Nguồn', type: 'power' },
-        { id: 8, name: 'Tản nhiệt', buttonText: 'Chọn Tản nhiệt', type: 'cooler' },
-        { id: 9, name: 'Vỏ Case', buttonText: 'Chọn Vỏ Case', type: 'case' },
-        { id: 10, name: 'Màn Hình', buttonText: 'Chọn Màn Hình', type: 'monitor' },
-        { id: 11, name: 'Bàn Phím', buttonText: 'Chọn Bàn Phím', type: 'keyboard' },
-        { id: 12, name: 'Chuột', buttonText: 'Chọn Chuột', type: 'mouse' },
-        { id: 13, name: 'Tai Nghe', buttonText: 'Chọn Tai Nghe', type: 'headset' },
-    ];
-
-    const handleOpenModal = (component) => {
-        setCurrentComponent(component);
-        setIsModalOpen(true);
-        setSearchText('');
-        setSortOrder(null);
-    };
-
     const handleSelectProduct = async (product) => {
-        setSelectedComponents(product);
-        const data = {
-            productId: product.id,
-            quantity: 1,
-        };
-        await requestAddToCartBuildPc(data);
-        await fetchData();
-        setIsModalOpen(false);
+        if (!currentComponent?.type) {
+            message.error('Component type is missing.');
+            return;
+        }
+
+        setSelectedComponents((prev) => ({
+            ...prev,
+            [currentComponent.type]: {
+                ...product,
+                quantity: 1,
+            },
+        }));
+        setQuantities((prev) => ({
+            ...prev,
+            [currentComponent.type]: 1,
+        }));
+
+        try {
+            await requestAddToCartBuildPc({
+                productId: product.id,
+                quantity: 1,
+            });
+            await fetchData();
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error('Error adding component:', error);
+            message.error('Unable to add component. Please try again.');
+            try {
+                await fetchData();
+            } catch (refreshError) {
+                console.error('Error refreshing build data:', refreshError);
+            }
+        }
     };
 
-    const handleDelete = async (productId) => {
+    const handleDelete = async (productId, componentType) => {
         try {
-            // Gọi API xóa với productId
-            const data = {
+            await requestDeleteCartBuildPc({
                 productId,
-            };
-            await requestDeleteCartBuildPc(data);
-            // Sau khi xóa thành công, cập nhật lại state
+            });
+
+            setSelectedComponents((prev) => {
+                const updated = { ...prev };
+                delete updated[componentType];
+                return updated;
+            });
+            setQuantities((prev) => {
+                const updated = { ...prev };
+                delete updated[componentType];
+                return updated;
+            });
 
             await fetchData();
         } catch (error) {
             console.error('Error deleting component:', error);
+            message.error('Unable to remove component. Please try again.');
         }
     };
 
@@ -293,11 +271,17 @@ function BuildPc() {
 
                     <div className={cx('components-list')}>
                         {pcComponents.map((component) => (
-                            <Row key={component.id} className={cx('component-row')} align="middle">
-                                <Col span={4}>
+                            <Row
+                                key={component.id}
+                                className={cx('component-row')}
+                                align="middle"
+                                gutter={[16, 16]}
+                                wrap
+                            >
+                                <Col xs={24} md={6} lg={4}>
                                     {component.id}. {component.name}
                                 </Col>
-                                <Col span={16}>
+                                <Col xs={24} md={14} lg={16}>
                                     {selectedComponents[component.type] ? (
                                         <Row align="middle" className={cx('selected-product')}>
                                             <Col span={4}>
@@ -322,9 +306,9 @@ function BuildPc() {
                                         </Row>
                                     ) : null}
                                 </Col>
-                                <Col span={4} className={cx('actions')}>
+                                <Col xs={24} md={4} lg={4} className={cx('actions')}>
                                     {selectedComponents[component.type] ? (
-                                        <Row gutter={8}>
+                                        <Row gutter={8} className={cx('quantity-row')} wrap>
                                             <Col>
                                                 <InputNumber
                                                     min={1}
@@ -376,7 +360,11 @@ function BuildPc() {
                                             </Col>
                                         </Row>
                                     ) : (
-                                        <Button type="primary" onClick={() => handleOpenModal(component)}>
+                                        <Button
+                                            type="primary"
+                                            onClick={() => handleOpenModal(component)}
+                                            className={cx('choose-button')}
+                                        >
                                             {component.buttonText}
                                         </Button>
                                     )}
@@ -466,3 +454,6 @@ function BuildPc() {
 }
 
 export default BuildPc;
+
+
+

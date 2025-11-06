@@ -325,8 +325,8 @@ function Contact() {
                         </Col>
 
                         <Col xs={24} md={8}>
-                            <Card style={{ height: '100%' }}>
-                                <div style={{ marginBottom: '30px' }}>
+                            <Card style={{ height: '100%' }} className="contact-info-card">
+                                <div style={{ marginBottom: '30px' }} className="payment-section">
                                     <Title level={4}>Thông tin thanh toán</Title>
                                     <Paragraph>
                                         <Text strong>Lưu ý: Tránh bị Scam lừa đảo!</Text>
@@ -348,28 +348,28 @@ function Contact() {
 
                                 <div>
                                     <Title level={4}>Địa chỉ cửa hàng</Title>
-                                    <Space direction="vertical" style={{ width: '100%' }}>
-                                        <Card size="small" title="SHOWROOM HÀ NỘI" style={{ marginBottom: '15px' }}>
-                                            <Space align="start">
+                                    <Space direction="vertical" style={{ width: '100%' }} className="contact-address-list">
+                                        <Card size="small" title="SHOWROOM HÀ NỘI">
+                                            <Space align="start" size={8}>
                                                 <EnvironmentOutlined />
                                                 <Paragraph style={{ margin: 0 }}>
                                                     83-85 Thái Hà, Trung Liệt, Đống Đa, Hà Nội
                                                 </Paragraph>
                                             </Space>
-                                            <Space align="start">
+                                            <Space align="start" size={8}>
                                                 <PhoneOutlined />
                                                 <Paragraph style={{ margin: 0 }}>036.625.8142 (Liên hệ 24/7)</Paragraph>
                                             </Space>
                                         </Card>
 
                                         <Card size="small" title="SHOWROOM HỒ CHÍ MINH">
-                                            <Space align="start">
+                                            <Space align="start" size={8}>
                                                 <EnvironmentOutlined />
                                                 <Paragraph style={{ margin: 0 }}>
                                                     40 Vĩnh Viễn, Phường 2, Quận 10, TP Hồ Chí Minh
                                                 </Paragraph>
                                             </Space>
-                                            <Space align="start">
+                                            <Space align="start" size={8}>
                                                 <PhoneOutlined />
                                                 <Paragraph style={{ margin: 0 }}>087.997.9997 (Liên hệ 24/7)</Paragraph>
                                             </Space>
@@ -382,12 +382,12 @@ function Contact() {
 
                                     <Divider style={{ margin: '15px 0' }} />
 
-                                    <Space direction="vertical" style={{ width: '100%' }}>
-                                        <Space align="start">
+                                    <Space direction="vertical" style={{ width: '100%' }} className="contact-links">
+                                        <Space align="start" size={8}>
                                             <MailOutlined />
                                             <Text>l2team.contact@gmail.com</Text>
                                         </Space>
-                                        <Space align="start">
+                                        <Space align="start" size={8}>
                                             <FacebookOutlined />
                                             <a
                                                 href="https://www.facebook.com/pcmarket.vn"
@@ -397,7 +397,7 @@ function Contact() {
                                                 facebook.com/pcmarket.vn
                                             </a>
                                         </Space>
-                                        <Space align="start">
+                                        <Space align="start" size={8}>
                                             <EnvironmentOutlined />
                                             <a href="https://pcmarket.vn/" target="_blank" rel="noopener noreferrer">
                                                 pcmarket.vn
