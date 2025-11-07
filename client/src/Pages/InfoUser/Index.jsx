@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Layout, Menu } from 'antd';
-import { UserOutlined, ShoppingOutlined, HeartOutlined, HistoryOutlined, LogoutOutlined } from '@ant-design/icons';
+import { UserOutlined, ShoppingOutlined, HeartOutlined, HistoryOutlined, LogoutOutlined, KeyOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './Index.module.scss';
@@ -8,6 +8,7 @@ import Header from '../../Components/Header/Header';
 
 // Import c├íc components
 import InfoUser from './Components/InfoUser/InfoUser';
+import ChangePassword from './Components/ChangePassword/ChangePassword';
 import ManagerOrder from './Components/ManagerOrder/ManagerOrder';
 import ManagerProductWatch from './Components/ManagerProductWatch/ManagerProductWatch';
 import { requestLogout } from '../../config/request';
@@ -57,25 +58,31 @@ function Index() {
         {
             key: 'profile',
             icon: <UserOutlined />,
-            label: 'Th├┤ng tin c├í nh├ón',
+            label: 'Thông tin cá nhân',
             onClick: () => handleMenuClick('profile', <InfoUser />),
         },
         {
             key: 'orders',
             icon: <ShoppingOutlined />,
-            label: '─É╞ín h├áng cß╗ºa t├┤i',
+            label: 'Quản lý đơn hàng',
             onClick: () => handleMenuClick('orders', <ManagerOrder />),
         },
         {
             key: 'wishlist',
             icon: <HeartOutlined />,
-            label: 'Sß║ún phß║⌐m ─æ├ú xem',
+            label: 'Sản phẩm yêu thích',
             onClick: () => handleMenuClick('wishlist', <ManagerProductWatch />),
+        },
+        {
+            key: 'change-password',
+            icon: <KeyOutlined />,
+            label: 'Đổi mật khẩu',
+            onClick: () => handleMenuClick('change-password', <ChangePassword />),
         },
         {
             key: 'logout',
             icon: <LogoutOutlined />,
-            label: '─É─âng xuß║Ñt',
+            label: 'Đăng xuất',
             onClick: () => handleLogout('logout'),
         },
     ];

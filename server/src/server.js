@@ -1,51 +1,51 @@
-﻿require('dotenv').config();
-
-const express = require('express');
+﻿const express = require('express');
 const crypto = require('crypto');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+
 const app = express();
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-const host = process.env.HOST || '0.0.0.0';
-const isProduction = process.env.NODE_ENV === 'production';
+
+// === IMPORT CONFIG ===
+const config = require('./config/env');
 const { connectDB } = require('./config/index');
 const routes = require('./routes/index');
 const syncDatabase = require('./models/sync');
 const { askQuestion } = require('./utils/Chatbot');
 
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const path = require('path');
-const cookieParser = require('cookie-parser');
+// === CẤU HÌNH ===
+const port = config.PORT;
+const host = config.HOST;
+const isProduction = config.NODE_ENV === 'production';
 
 app.set('trust proxy', 1);
 
-const defaultClientUrl = 'http://localhost:5173';
-const rawClientUrls = process.env.CLIENT_URLS || process.env.CLIENT_URL || defaultClientUrl || 'http://shop-pc-client.web.app';
-const allowedOrigins = rawClientUrls
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
+// CORS
 app.use(
     cors({
         credentials: true,
         origin(origin, callback) {
-            if (!origin || allowedOrigins.includes(origin)) {
+            if (!origin || config.CLIENT_URLS.includes(origin)) {
                 return callback(null, true);
             }
-
             console.warn(`Blocked CORS request from origin: ${origin}`);
             return callback(null, false);
         },
-    }),
+    })
 );
+
+// Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+// === KẾT NỐI DB ===
 connectDB();
 syncDatabase();
 
+// === CHATBOT API ===
 const conversationStore = new Map();
 
 app.post('/api/chat', async (req, res) => {
@@ -53,7 +53,7 @@ app.post('/api/chat', async (req, res) => {
         const { question, conversationId } = req.body;
 
         if (!question || typeof question !== 'string' || !question.trim()) {
-            return res.status(400).json({ success: false, message: 'Cau hoi khong hop le.' });
+            return res.status(400).json({ success: false, message: 'Câu hỏi không hợp lệ.' });
         }
 
         let key = conversationId || req.cookies.conversationId;
@@ -75,25 +75,26 @@ app.post('/api/chat', async (req, res) => {
         return res.status(200).json({ answer, conversationId: key });
     } catch (error) {
         console.error('Chat API error:', error);
-        return res.status(500).json({ success: false, message: 'Loi server' });
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 });
 
+// === ROUTES ===
 routes(app);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, '../src')));
 
+// === ERROR HANDLER ===
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({
         success: false,
-        message: err.message || 'Loi server',
+        message: err.message || 'Lỗi server',
     });
 });
 
+// === START SERVER ===
 app.listen(port, host, () => {
-    console.log(`Example app listening on http://${host}:${port}`);
+    console.log(`Server running at ${config.SERVER_URL}`);
+    console.log(`Mode: ${config.NODE_ENV}`);
 });
-
-
-

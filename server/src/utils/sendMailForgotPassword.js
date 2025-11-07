@@ -7,7 +7,7 @@
 const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 const fs = require('fs');
-require('dotenv').config();
+const config = require('../config/env');
 
 // ======== 🔐 Cấu hình OAuth2 ==========
 const CLIENT_ID = process.env.CLIENT_ID;

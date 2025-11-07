@@ -14,6 +14,9 @@ router.get('/api/logout', authUser, asyncHandler(controllerUser.logout));
 
 router.post('/api/update-info-user', authUser, asyncHandler(controllerUser.updateInfoUser));
 
+// Change password
+router.post('/api/change-password', authUser, asyncHandler(controllerUser.changePassword));
+
 router.get('/api/dashboard', asyncHandler(controllerUser.getDashboardStats));
 
 router.get('/api/get-order-stats', asyncHandler(controllerUser.getOrderStats));

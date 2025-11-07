@@ -16,7 +16,7 @@ const { log } = require('util');
 const paypal = require('@paypal/checkout-server-sdk');
 const paypalClient = require('../config/paypal.config');
 
-require('dotenv').config();
+const config = require('../config/env');
 
 const defaultApiBaseUrl = 'http://localhost:3000';
 const defaultClientBaseUrl = 'http://localhost:5173';

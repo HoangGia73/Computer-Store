@@ -277,6 +277,11 @@ export const requestUpdateUser = async (data) => {
     return res.data;
 };
 
+export const requestChangePassword = async (data) => {
+    const res = await request.post('/api/change-password', data);
+    return res.data;
+};
+
 export const requestDashboard = async (params) => {
     const res = await request.get('/api/dashboard', { params: params });
     return res.data;

@@ -42,6 +42,41 @@ const baseCookieOptions = {
 const ADMIN_POSITIONS = ['admin', 'warehouse_manager', 'staff'];
 
 class controllerUser {
+    async changePassword(req, res) {
+        const { id } = req.user || {};
+        const { currentPassword, newPassword } = req.body || {};
+
+        if (!id) {
+            throw new BadUserRequestError('Vui lòng đăng nhập');
+        }
+        if (!currentPassword || !newPassword) {
+            throw new BadUserRequestError('Vui lòng nhập đầy đủ thông tin');
+        }
+        if (typeof newPassword !== 'string' || newPassword.length < 6) {
+            throw new BadUserRequestError('Mật khẩu mới phải có ít nhất 6 ký tự');
+        }
+
+        const user = await modelUser.findOne({ where: { id } });
+        if (!user) {
+            throw new BadUserRequestError('Tài khoản không tồn tại');
+        }
+
+        const isMatch = bcrypt.compareSync(currentPassword, user.password);
+        if (!isMatch) {
+            throw new BadUserRequestError('Mật khẩu hiện tại không đúng');
+        }
+        const isSame = bcrypt.compareSync(newPassword, user.password);
+        if (isSame) {
+            throw new BadUserRequestError('Mật khẩu mới không được trùng với mật khẩu hiện tại');
+        }
+
+        const saltRounds = 10;
+        const salt = bcrypt.genSaltSync(saltRounds);
+        const hash = bcrypt.hashSync(newPassword, salt);
+        await user.update({ password: hash });
+
+        new OK({ message: 'Đổi mật khẩu thành công' }).send(res);
+    }
     async registerUser(req, res) {
         const { fullName, phone, address, email, password } = req.body;
         if (!fullName || !phone || !address || !email || !password) {
@@ -356,20 +391,20 @@ class controllerUser {
             });
             const refreshToken = await createRefreshToken({ id: user.id });
             res.cookie('token', token, {
-            ...baseCookieOptions,
-            httpOnly: true,
-            maxAge: 15 * 60 * 1000, // 15 phut
-        });
+                ...baseCookieOptions,
+                httpOnly: true,
+                maxAge: 15 * 60 * 1000, // 15 phut
+            });
             res.cookie('logged', 1, {
-            ...baseCookieOptions,
-            httpOnly: false,
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngay
-        });
+                ...baseCookieOptions,
+                httpOnly: false,
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngay
+            });
             res.cookie('refreshToken', refreshToken, {
-            ...baseCookieOptions,
-            httpOnly: true,
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngay
-        });
+                ...baseCookieOptions,
+                httpOnly: true,
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngay
+            });
             new OK({ message: 'Đăng nhập thành công', metadata: { token, refreshToken } }).send(res);
         } else {
             const newUser = await modelUser.create({
@@ -386,20 +421,20 @@ class controllerUser {
             });
             const refreshToken = await createRefreshToken({ id: newUser.id });
             res.cookie('token', token, {
-            ...baseCookieOptions,
-            httpOnly: true,
-            maxAge: 15 * 60 * 1000, // 15 phut
-        });
+                ...baseCookieOptions,
+                httpOnly: true,
+                maxAge: 15 * 60 * 1000, // 15 phut
+            });
             res.cookie('logged', 1, {
-            ...baseCookieOptions,
-            httpOnly: false,
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngay
-        });
+                ...baseCookieOptions,
+                httpOnly: false,
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngay
+            });
             res.cookie('refreshToken', refreshToken, {
-            ...baseCookieOptions,
-            httpOnly: true,
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngay
-        });
+                ...baseCookieOptions,
+                httpOnly: true,
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngay
+            });
             new OK({ message: 'Đăng nhập thành công', metadata: { token, refreshToken } }).send(res);
         }
     }

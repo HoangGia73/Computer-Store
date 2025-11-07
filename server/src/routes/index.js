@@ -22,84 +22,15 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 function routes(app) {
-    // --- User ---
-    app.post('/api/register', userRoutes);
-    app.post('/api/login', userRoutes);
-    app.get('/api/auth', userRoutes);
-    app.get('/api/refresh-token', userRoutes);
-    app.get('/api/logout', userRoutes);
-    app.post('/api/update-info-user', userRoutes);
-    app.get('/api/dashboard', userRoutes);
-    app.get('/api/get-users', userRoutes);
-    app.post('/api/login-google', userRoutes);
-    app.get('/api/admin', userRoutes);
-    app.get('/api/get-order-stats', userRoutes);
-    app.post('/api/forgot-password', userRoutes);
-    app.post('/api/reset-password', userRoutes);
-    app.post('/api/update-role-user', userRoutes);
-    app.get('/api/users/pie-chart', userRoutes);
-    app.delete('/api/delete-user/:id', userRoutes);
-
-    // --- Product ---
-    app.post('/api/create-product', productRoutes);
-    app.get('/api/get-products', productRoutes);
-    app.post('/api/update-product', productRoutes);
-    app.delete('/api/delete-product', productRoutes);
-    app.get('/api/get-products-by-categories', productRoutes);
-    app.get('/api/get-product-by-id', productRoutes);
-    app.get('/api/get-product-by-component-type', productRoutes);
-    app.post('/api/build-pc-cart', productRoutes);
-    app.get('/api/get-cart-build-pc', productRoutes);
-    app.post('/api/update-quantity-cart-build-pc', productRoutes);
-    app.post('/api/delete-cart-build-pc', productRoutes);
-    app.post('/api/create-product-watch', productRoutes);
-    app.get('/api/get-product-watch', productRoutes);
-    app.get('/api/get-product-by-id-category', productRoutes);
-    app.get('/api/get-product-hot-sale', productRoutes);
-    app.get('/api/get-product-search', productRoutes);
-    app.get('/api/get-product-search-by-category', productRoutes);
-
-    // --- Category ---
-    app.post('/api/create-category', categoryRoutes);
-    app.get('/api/get-all-category', categoryRoutes);
-    app.delete('/api/delete-category', categoryRoutes);
-    app.post('/api/update-category', categoryRoutes);
-    app.get('/api/get-category-by-component-types', categoryRoutes);
-    app.get('/api/get-all-products', categoryRoutes);
-
-    // --- Cart ---
-    app.post('/api/add-to-cart', cartRoutes);
-    app.get('/api/get-cart', cartRoutes);
-    app.post('/api/delete-cart', cartRoutes);
-    app.post('/api/update-info-cart', cartRoutes);
-    app.post('/api/add-to-cart-build-pc', cartRoutes);
-    app.post('/api/update-quantity', cartRoutes);
-    app.get('/api/get-cart-build-pc', cartRoutes);
-    app.post('/api/delete-all-cart-build-pc', cartRoutes);
-
-    // --- Payments ---
-    app.post('/api/payments', paymentsRoutes);
-    app.get('/api/check-payment-paypal', paymentsRoutes);
-    app.get('/api/check-payment-vnpay', paymentsRoutes);
-    app.post('/api/cancel-order', paymentsRoutes);
-    app.get('/api/get-payment', paymentsRoutes);
-    app.get('/api/get-payments', paymentsRoutes);
-    app.get('/api/get-order-admin', paymentsRoutes);
-    app.post('/api/update-order-status', paymentsRoutes);
-
-    // --- Product preview ---
-    app.post('/api/create-product-preview', productPreviewRoutes);
-    app.get('/api/get-product-preview-user', productPreviewRoutes);
-
-    // --- Blogs ---
-    app.post('/api/create-blog', blogsRoutes);
-    app.get('/api/get-blogs', blogsRoutes);
-    app.delete('/api/delete-blog', blogsRoutes);
-    app.get('/api/get-blog-by-id', blogsRoutes);
-
-    // --- Contact ---
-    app.post('/api/create-contact', contactRoutes);
-    app.get('/api/get-contacts', contactRoutes);
+    // Mount routers once; each router already includes '/api/...' in its paths
+    app.use(userRoutes);
+    app.use(productRoutes);
+    app.use(categoryRoutes);
+    app.use(cartRoutes);
+    app.use(paymentsRoutes);
+    app.use(productPreviewRoutes);
+    app.use(blogsRoutes);
+    app.use(contactRoutes);
 
     // --- Upload 1 ảnh ---
     app.post('/api/upload', upload.single('image'), (req, res) => {

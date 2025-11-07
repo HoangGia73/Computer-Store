@@ -1,15 +1,15 @@
-require('dotenv').config();
+const config = require('../config/env');
 const OpenAI = require('openai');
 
 const modelProduct = require('../models/products.model');
 
-const openAiApiKey = process.env.OPENAI_API_KEY;
+const openAiApiKey = config.OPENAI_API_KEY;
 if (!openAiApiKey) {
     throw new Error('Missing environment variable OPENAI_API_KEY');
 }
 
-const chatCompletionsModel = process.env.OPENAI_CHAT_COMPLETIONS_MODEL || 'gpt-4o-mini';
-const parsedTemperature = Number.parseFloat(process.env.OPENAI_CHATBOT_TEMPERATURE);
+const chatCompletionsModel = config.OPENAI_CHAT_COMPLETIONS_MODEL || 'gpt-4o-mini';
+const parsedTemperature = Number.parseFloat(config.OPENAI_CHATBOT_TEMPERATURE);
 const chatCompletionTemperature = Number.isFinite(parsedTemperature) ? parsedTemperature : 0.7;
 const DEFAULT_SYSTEM_PROMPT = [
     'Bạn là trợ lý bán hàng thân thiện và chính xác cho cửa hàng máy tính.',

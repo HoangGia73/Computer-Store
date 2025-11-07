@@ -4,7 +4,7 @@ const modelApiKey = require('../models/apiKey.model');
 const { BadUserRequestError } = require('../core/error.response');
 const { jwtDecode } = require('jwt-decode');
 
-require('dotenv').config();
+const config = require('../config/env');
 
 const createApiKey = async (userId) => {
     const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
