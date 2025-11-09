@@ -50,9 +50,12 @@ const conversationStore = new Map();
 
 app.post('/api/chat', async (req, res) => {
     try {
+        console.log('📩 Chat request received:', { question: req.body.question });
+
         const { question, conversationId } = req.body;
 
         if (!question || typeof question !== 'string' || !question.trim()) {
+            console.log('❌ Invalid question');
             return res.status(400).json({ success: false, message: 'Câu hỏi không hợp lệ.' });
         }
 
@@ -67,15 +70,22 @@ app.post('/api/chat', async (req, res) => {
             });
         }
 
+        console.log('🔑 Conversation ID:', key);
+
         const previousHistory = conversationStore.get(key) || [];
+        console.log('📜 Previous history length:', previousHistory.length);
+
+        console.log('🤖 Calling askQuestion...');
         const { answer, history } = await askQuestion(question, previousHistory);
+        console.log('✅ Got answer, length:', answer?.length);
 
         conversationStore.set(key, history);
 
         return res.status(200).json({ answer, conversationId: key });
     } catch (error) {
-        console.error('Chat API error:', error);
-        return res.status(500).json({ success: false, message: 'Lỗi server' });
+        console.error('❌ Chat API error:', error);
+        console.error('Error stack:', error.stack);
+        return res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
     }
 });
 

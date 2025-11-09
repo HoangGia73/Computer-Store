@@ -18,8 +18,11 @@ const settings = {
     speed: 500,
     slidesToShow: 6,
     slidesToScroll: 1,
-    autoplay: true, // Thêm dòng này
-    autoplaySpeed: 3000, // Và dòng này (3 giây chuyển 1 lần)
+    autoplay: true,
+    autoplaySpeed: 3000,
+    accessibility: true,
+    focusOnSelect: false,
+    swipeToSlide: true,
     responsive: [
         {
             breakpoint: 1600,
@@ -148,15 +151,15 @@ function HomePage() {
 
             <div className={cx('category-list')}>
                 {category.map((item) => (
-                    <div key={item.id}>
+                    <div key={item.category.id} className={cx('category-section')}>
                         <div className={cx('category-item')}>
                             <h2>{item.category.name}</h2>
                             <button onClick={() => navigate(`/category/${item.category.id}`)}>Xem tất cả</button>
                         </div>
                         <div className={cx('slider-container')}>
-                            <Slider {...settings}>
+                            <Slider {...settings} key={`slider-${item.category.id}`}>
                                 {item.products.map((product) => (
-                                    <div key={product.id}>
+                                    <div key={product.id} className={cx('product-slide')}>
                                         <CardBody product={product} />
                                     </div>
                                 ))}

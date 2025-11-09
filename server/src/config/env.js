@@ -45,9 +45,16 @@ module.exports = {
     PAYPAL_CLIENT_SECRET: requireEnv('PAYPAL_CLIENT_SECRET'),
     PAYPAL_MODE: process.env.PAYPAL_MODE || 'sandbox',
 
-    // OpenAI
-    OPENAI_API_KEY: requireEnv('OPENAI_API_KEY'),
-    OPENAI_CHAT_COMPLETIONS_MODEL: process.env.OPENAI_CHAT_COMPLETIONS_MODEL || 'gpt-4o-mini',
-    OPENAI_CHATBOT_TEMPERATURE: Number(process.env.OPENAI_CHATBOT_TEMPERATURE) || 0.7,
-    OPENAI_CHATBOT_SYSTEM_PROMPT: requireEnv('OPENAI_CHATBOT_SYSTEM_PROMPT'),
+    // Chatbot - Gemini only
+    GEMINI_API_KEY: requireEnv('GEMINI_API_KEY'),
+    GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    CHATBOT_TEMPERATURE: process.env.CHATBOT_TEMPERATURE || '0.7',
+    CHATBOT_SYSTEM_PROMPT: process.env.CHATBOT_SYSTEM_PROMPT || '',
+
+    // Database
+    DB_HOST: requireEnv('DB_HOST'),
+    DB_PORT: Number(process.env.DB_PORT) || 3306,
+    DB_USER: requireEnv('DB_USER'),
+    DB_PASSWORD: requireEnv('DB_PASSWORD'),
+    DB_NAME: requireEnv('DB_NAME'),
 };

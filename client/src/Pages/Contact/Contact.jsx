@@ -86,7 +86,7 @@ function Contact() {
             </header>
 
             <div className="contact-container" style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
-                <Card bordered={false}>
+                <Card variant="borderless">
                     <Title level={2} style={{ textAlign: 'center', color: '#1890ff', marginBottom: '30px' }}>
                         Máy Tính PCM - TƯ VẤN BUILD PC Theo Yêu Cầu 24/7
                     </Title>

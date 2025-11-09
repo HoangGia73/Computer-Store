@@ -1,11 +1,11 @@
 const { Sequelize } = require('sequelize');
-const config = require('../config/env');
+const config = require('./env');
 
-const dbName = process.env.DB_NAME || 'royal123_computer';
-const dbUser = process.env.DB_USER || 'royal123';
-const dbPassword = process.env.DB_PASSWORD || 'Giaiu123@';
-const dbHost = process.env.DB_HOST || 'mysql-royal123.alwaysdata.net';
-const dbPort = process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306;
+const dbName = config.DB_NAME;
+const dbUser = config.DB_USER;
+const dbPassword = config.DB_PASSWORD;
+const dbHost = config.DB_HOST;
+const dbPort = config.DB_PORT;
 
 const connect = new Sequelize(dbName, dbUser, dbPassword, {
     host: dbHost,

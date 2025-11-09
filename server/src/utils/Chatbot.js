@@ -1,16 +1,19 @@
 const config = require('../config/env');
-const OpenAI = require('openai');
-
 const modelProduct = require('../models/products.model');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const openAiApiKey = config.OPENAI_API_KEY;
-if (!openAiApiKey) {
-    throw new Error('Missing environment variable OPENAI_API_KEY');
+// Initialize Gemini
+if (!config.GEMINI_API_KEY) {
+    throw new Error('Missing GEMINI_API_KEY in environment');
 }
 
-const chatCompletionsModel = config.OPENAI_CHAT_COMPLETIONS_MODEL || 'gpt-4o-mini';
-const parsedTemperature = Number.parseFloat(config.OPENAI_CHATBOT_TEMPERATURE);
-const chatCompletionTemperature = Number.isFinite(parsedTemperature) ? parsedTemperature : 0.7;
+const gemini = new GoogleGenerativeAI(config.GEMINI_API_KEY);
+const chatCompletionTemperature = parseFloat(config.CHATBOT_TEMPERATURE) || 0.7;
+
+console.log('✅ Chatbot initialized with Google Gemini');
+console.log('📝 Model:', config.GEMINI_MODEL);
+
+// System prompt
 const DEFAULT_SYSTEM_PROMPT = [
     'Bạn là trợ lý bán hàng thân thiện và chính xác cho cửa hàng máy tính.',
     'Yêu cầu:',
@@ -21,11 +24,8 @@ const DEFAULT_SYSTEM_PROMPT = [
     '5. Bạn luôn cố gắng giúp khách chọn được sản phẩm phù hợp, nói chuyện tự nhiên như người thật, không quá dài dòng.',
     '6. Luôn chào hỏi khách hàng một cách thân thiện trước khi trả lời câu hỏi.',
 ].join('\n');
-const chatSystemPrompt = (process.env.OPENAI_CHATBOT_SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT).split('\\n').join('\n');
 
-const openai = new OpenAI({
-    apiKey: openAiApiKey,
-});
+const chatSystemPrompt = (config.CHATBOT_SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT).split('\\n').join('\n');
 
 const currencyFormatter = new Intl.NumberFormat('vi-VN');
 
@@ -41,7 +41,7 @@ function sanitizeHistory(history = []) {
         return [];
     }
 
-    const allowedRoles = new Set(['system', 'user', 'assistant']);
+    const allowedRoles = new Set(['system', 'user', 'assistant', 'model']);
 
     return history
         .filter(
@@ -64,7 +64,10 @@ async function askQuestion(question, history = []) {
     }
 
     try {
+        console.log('🤖 Chatbot: Fetching products from database...');
         const products = await modelProduct.findAll({});
+        console.log(`✅ Found ${products.length} products`);
+
         const productData = products
             .map((product, index) => {
                 const basePrice = Number(product.price) || 0;
@@ -76,24 +79,37 @@ async function askQuestion(question, history = []) {
             .join('\n');
 
         const sanitizedHistory = sanitizeHistory(history);
+        console.log(`📜 Sanitized history: ${sanitizedHistory.length} messages`);
 
-        const messages = [
-            { role: 'system', content: chatSystemPrompt },
-            {
-                role: 'system',
-                content: `Danh sách sản phẩm hiện có:\n${productData || '- Không có dữ liệu sản phẩm hiện tại.'}`,
+        const contextMessage = `Danh sách sản phẩm hiện có:\n${productData || '- Không có dữ liệu sản phẩm hiện tại.'}`;
+
+        // Gemini implementation
+        const model = gemini.getGenerativeModel({ model: config.GEMINI_MODEL });
+
+        // Convert history to Gemini format (assistant -> model)
+        const geminiHistory = sanitizedHistory.map((msg) => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }],
+        }));
+
+        // Create chat with history
+        const chat = model.startChat({
+            history: geminiHistory,
+            generationConfig: {
+                temperature: chatCompletionTemperature,
+                maxOutputTokens: 2048,
             },
-            ...sanitizedHistory,
-            { role: 'user', content: question.trim() },
-        ];
-
-        const completion = await openai.chat.completions.create({
-            model: chatCompletionsModel,
-            messages,
-            temperature: chatCompletionTemperature,
         });
 
-        const answer = completion.choices[0]?.message?.content?.trim() || '';
+        // Build prompt with system instruction and context
+        const fullPrompt = `${chatSystemPrompt}\n\n${contextMessage}\n\nCâu hỏi của khách hàng: ${question.trim()}`;
+
+        console.log('🚀 Calling Google Gemini API...');
+        const result = await chat.sendMessage(fullPrompt);
+        console.log('✅ Gemini response received');
+
+        const answer = result.response.text().trim();
+
         const updatedHistory = [
             ...sanitizedHistory,
             { role: 'user', content: question.trim() },

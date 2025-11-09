@@ -5,7 +5,6 @@ import classNames from 'classnames/bind';
 import styles from './CategoryComponentFilter.module.scss';
 import { SearchOutlined } from '@ant-design/icons';
 
-const { Panel } = Collapse;
 const cx = classNames.bind(styles);
 
 function CategoryComponentFilter({ onChange, categoryId, filters, selectedIds = [] }) {
@@ -204,45 +203,46 @@ function CategoryComponentFilter({ onChange, categoryId, filters, selectedIds = 
         return order.indexOf(a.type) - order.indexOf(b.type);
     });
 
+    // Tạo items array cho Collapse component (Ant Design v5+)
+    const collapseItems = sortedComponentGroups.map((group) => ({
+        key: group.type,
+        label: `${componentTypeLabels[group.type] || group.type} (${group.components?.length || 0})`,
+        children: (
+            <>
+                <Input
+                    placeholder="Tìm kiếm"
+                    prefix={<SearchOutlined />}
+                    onChange={(e) => handleSearch(group.type, e.target.value)}
+                    className={cx('search-input')}
+                    value={searchMap[group.type] || ''}
+                />
+
+                <div className={cx('component-list')}>
+                    {(filteredComponents[group.type] || []).map((part) => (
+                        <div key={part.id} className={cx('component-item')}>
+                            <Checkbox
+                                onChange={(e) =>
+                                    handleComponentPartChange(e.target.checked, part.id, part.allProductIds)
+                                }
+                                checked={selectedParts.some((item) => item.id === part.id)}
+                            >
+                                {part.name}
+                            </Checkbox>
+                        </div>
+                    ))}
+
+                    {filteredComponents[group.type]?.length === 0 && (
+                        <div className={cx('no-results')}>Không tìm thấy linh kiện phù hợp</div>
+                    )}
+                </div>
+            </>
+        ),
+    }));
+
     return (
         <Card className={cx('component-filter-card')} title="Bộ lọc linh kiện">
             <div className={cx('filter-scroll-container')}>
-                <Collapse defaultActiveKey={[]}>
-                    {sortedComponentGroups.map((group) => (
-                        <Panel
-                            header={`${componentTypeLabels[group.type] || group.type} (${group.components?.length || 0
-                                })`}
-                            key={group.type}
-                        >
-                            <Input
-                                placeholder="Tìm kiếm"
-                                prefix={<SearchOutlined />}
-                                onChange={(e) => handleSearch(group.type, e.target.value)}
-                                className={cx('search-input')}
-                                value={searchMap[group.type] || ''}
-                            />
-
-                            <div className={cx('component-list')}>
-                                {(filteredComponents[group.type] || []).map((part) => (
-                                    <div key={part.id} className={cx('component-item')}>
-                                        <Checkbox
-                                            onChange={(e) =>
-                                                handleComponentPartChange(e.target.checked, part.id, part.allProductIds)
-                                            }
-                                            checked={selectedParts.some((item) => item.id === part.id)}
-                                        >
-                                            {part.name}
-                                        </Checkbox>
-                                    </div>
-                                ))}
-
-                                {filteredComponents[group.type]?.length === 0 && (
-                                    <div className={cx('no-results')}>Không tìm thấy linh kiện phù hợp</div>
-                                )}
-                            </div>
-                        </Panel>
-                    ))}
-                </Collapse>
+                <Collapse defaultActiveKey={[]} items={collapseItems} />
             </div>
         </Card>
     );

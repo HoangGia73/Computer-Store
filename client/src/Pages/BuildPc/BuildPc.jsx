@@ -36,6 +36,23 @@ const cx = classNames.bind(styles);
 const { Title } = Typography;
 const { Option } = Select;
 
+// Danh sách các loại linh kiện máy tính
+const pcComponents = [
+    { id: 1, name: 'CPU (Bộ vi xử lý)', type: 'cpu' },
+    { id: 2, name: 'Mainboard (Bo mạch chủ)', type: 'mainboard' },
+    { id: 3, name: 'RAM (Bộ nhớ)', type: 'ram' },
+    { id: 4, name: 'VGA (Card màn hình)', type: 'vga' },
+    { id: 5, name: 'SSD (Ổ cứng SSD)', type: 'ssd' },
+    { id: 6, name: 'HDD (Ổ cứng HDD)', type: 'hdd' },
+    { id: 7, name: 'PSU (Nguồn)', type: 'power' },
+    { id: 8, name: 'Cooling (Tản nhiệt)', type: 'cooler' },
+    { id: 9, name: 'Case (Vỏ máy)', type: 'case' },
+    { id: 10, name: 'Monitor (Màn hình)', type: 'monitor' },
+    { id: 11, name: 'Keyboard (Bàn phím)', type: 'keyboard' },
+    { id: 12, name: 'Mouse (Chuột)', type: 'mouse' },
+    { id: 13, name: 'Headset (Tai nghe)', type: 'headset' },
+];
+
 function BuildPc() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentComponent, setCurrentComponent] = useState(null);
@@ -48,6 +65,64 @@ function BuildPc() {
 
     const [totalPrice, setTotalPrice] = useState(0);
     const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+
+    // Định nghĩa các cột cho bảng sản phẩm trong Modal
+    const columns = [
+        {
+            title: 'Hình ảnh',
+            dataIndex: 'images',
+            key: 'images',
+            width: 100,
+            render: (images) => (
+                <Image
+                    src={images?.split(',')[0]}
+                    alt="product"
+                    width={80}
+                    height={80}
+                    style={{ objectFit: 'cover' }}
+                />
+            ),
+        },
+        {
+            title: 'Tên sản phẩm',
+            dataIndex: 'name',
+            key: 'name',
+            width: 300,
+        },
+        {
+            title: 'Giá',
+            dataIndex: 'price',
+            key: 'price',
+            width: 150,
+            sorter: (a, b) => a.price - b.price,
+            render: (price) => `${price.toLocaleString()} VNĐ`,
+        },
+        {
+            title: 'Còn lại',
+            dataIndex: 'stock',
+            key: 'stock',
+            width: 100,
+            render: (stock) => (
+                <Tag color={stock > 0 ? 'green' : 'red'}>
+                    {stock > 0 ? `${stock} sản phẩm` : 'Hết hàng'}
+                </Tag>
+            ),
+        },
+        {
+            title: 'Thao tác',
+            key: 'action',
+            width: 120,
+            render: (_, product) => (
+                <Button
+                    type="primary"
+                    onClick={() => handleSelectProduct(product)}
+                    disabled={product.stock <= 0}
+                >
+                    Chọn
+                </Button>
+            ),
+        },
+    ];
 
     const fetchData = async () => {
         const res = await requestGetCartBuildPc();
@@ -250,6 +325,13 @@ function BuildPc() {
         }
     };
 
+    const handleOpenModal = (component) => {
+        setCurrentComponent(component);
+        setIsModalOpen(true);
+        setSearchText('');
+        setSortOrder(null);
+    };
+
     return (
         <div className={cx('wrapper')}>
             <header>
@@ -365,7 +447,7 @@ function BuildPc() {
                                             onClick={() => handleOpenModal(component)}
                                             className={cx('choose-button')}
                                         >
-                                            {component.buttonText}
+                                            Chọn
                                         </Button>
                                     )}
                                 </Col>
@@ -410,16 +492,21 @@ function BuildPc() {
                             style={{ width: 150 }}
                             onChange={handleSortChange}
                             value={sortOrder}
+                            allowClear
                         >
                             <Option value="ascend">Giá từ thấp đến cao</Option>
                             <Option value="descend">Giá từ cao đến thấp</Option>
-                            <Option value={null}>Mặc định</Option>
                         </Select>
                     </Space>
                     <Table
                         columns={columns}
                         dataSource={filteredProducts.length > 0 ? filteredProducts : componentProducts}
-                        pagination={false}
+                        rowKey="id"
+                        pagination={{
+                            pageSize: 10,
+                            showSizeChanger: true,
+                            showTotal: (total) => `Tổng ${total} sản phẩm`,
+                        }}
                         onChange={handleTableChange}
                     />
                 </Modal>
