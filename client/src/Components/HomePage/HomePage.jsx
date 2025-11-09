@@ -52,7 +52,7 @@ const settings = {
         {
             breakpoint: 520,
             settings: {
-                slidesToShow: 1,
+                slidesToShow: 2,
                 slidesToScroll: 1,
             },
         },
@@ -60,11 +60,42 @@ const settings = {
 };
 const cx = classNames.bind(styles);
 
+const MAX_DOTS = 5;
+
+const CustomDots = ({ currentSlide = 0, totalSlides = 0 }) => {
+    if (!totalSlides) return null;
+
+    const totalDots = Math.min(MAX_DOTS, totalSlides);
+    const lastSlideIndex = totalSlides - 1;
+
+    let activeDot = 0;
+
+    if (totalSlides <= MAX_DOTS) {
+        activeDot = Math.min(currentSlide, totalDots - 1);
+    } else if (currentSlide <= 3) {
+        activeDot = currentSlide;
+    } else if (currentSlide >= lastSlideIndex) {
+        activeDot = MAX_DOTS - 1;
+    } else {
+        activeDot = MAX_DOTS - 2;
+    }
+
+    return (
+        <div className={cx('custom-dots')}>
+            {Array.from({ length: totalDots }).map((_, idx) => (
+                <span key={idx} className={cx('dot', { active: idx === activeDot })} />
+            ))}
+        </div>
+    );
+};
+
 function HomePage() {
     const [category, setCategory] = useState([]);
     const [showBackToTop, setShowBackToTop] = useState(false);
 
     const [productHotSale, setProductHotSale] = useState([]);
+    const [hotSaleSlide, setHotSaleSlide] = useState(0);
+    const [categorySlides, setCategorySlides] = useState({});
 
     const [blogs, setBlogs] = useState([]);
 
@@ -116,6 +147,13 @@ function HomePage() {
 
     const navigate = useNavigate();
 
+    const handleCategorySlideChange = (categoryId, index) => {
+        setCategorySlides((prev) => ({
+            ...prev,
+            [categoryId]: index,
+        }));
+    };
+
     return (
         <div className={cx('wrapper')}>
             <div className={cx('parent')}>
@@ -137,13 +175,14 @@ function HomePage() {
                 <div className={cx('hot-sale-banner')}>
                     <img src="https://pcmarket.vn/static/assets/2021/images/hot-sale-cuoi-tuan-1.gif" alt="Hot sale banner" />
                 </div>
-                <Slider {...settings}>
+                <Slider {...settings} afterChange={(index) => setHotSaleSlide(index)}>
                     {productHotSale.map((product) => (
                         <div className={cx('hot-sale-item')} key={product.id}>
                             <CardBody product={product} />
                         </div>
                     ))}
                 </Slider>
+                <CustomDots currentSlide={hotSaleSlide} totalSlides={productHotSale.length} />
             </div>
 
             <div className={cx('category-list')}>
@@ -154,13 +193,20 @@ function HomePage() {
                             <button onClick={() => navigate(`/category/${item.category.id}`)}>Xem tất cả</button>
                         </div>
                         <div className={cx('slider-container')}>
-                            <Slider {...settings}>
+                            <Slider
+                                {...settings}
+                                afterChange={(index) => handleCategorySlideChange(item.category.id, index)}
+                            >
                                 {item.products.map((product) => (
                                     <div key={product.id}>
                                         <CardBody product={product} />
                                     </div>
                                 ))}
                             </Slider>
+                            <CustomDots
+                                currentSlide={categorySlides[item.category.id] || 0}
+                                totalSlides={item.products.length}
+                            />
                         </div>
                     </div>
                 ))}
@@ -178,7 +224,7 @@ function HomePage() {
 
                 <Row gutter={[24, 24]} style={{ marginTop: '20px' }}>
                     {blogs.map((blog) => (
-                        <Col xs={24} sm={12} md={8} lg={6} key={blog.id}>
+                        <Col xs={12} sm={12} md={8} lg={6} key={blog.id}>
                             <Card
                                 hoverable
                                 cover={
