@@ -31,6 +31,8 @@ function Category() {
         current: 1,
         pageSize: 12,
     });
+    const [isMobileView, setIsMobileView] = useState(false);
+    const [showFilters, setShowFilters] = useState(true);
 
     // Reset filters when category changes
     useEffect(() => {
@@ -49,6 +51,21 @@ function Category() {
         { value: 'price-desc', label: 'Giá giảm dần' },
         { value: 'discount', label: 'Khuyến mãi' },
     ];
+
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobileView(window.innerWidth < 992);
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    useEffect(() => {
+        setShowFilters(!isMobileView);
+    }, [isMobileView]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -122,62 +139,129 @@ function Category() {
             <Header />
             <Content className={cx('content')}>
                 <Row gutter={[24, 24]}>
-                    <Col span={6}>
-                        <Card title="Bộ lọc sản phẩm">
-                            <div className={cx('filter-section')}>
-                                <h4>Tìm kiếm</h4>
-                                <Search
-                                    placeholder="Tên sản phẩm..."
-                                    onChange={(e) => {
-                                        setFilters({ ...filters, search: e.target.value });
-                                        setPagination((prev) => ({ ...prev, current: 1 }));
-                                    }}
-                                    allowClear
+
+                    <Col xs={24} md={24} lg={6}>
+                        <div className={cx('filters-column')}>
+                            {isMobileView && (
+                                <button
+                                    type="button"
+                                    className={cx('filter-toggle')}
+                                    onClick={() => setShowFilters((prev) => !prev)}
+                                >
+                                    {showFilters ? 'Thu gon bo loc' : 'Mo rong bo loc'}
+                                </button>
+                            )}
+
+                            <div className={cx('filters-panel', { open: showFilters || !isMobileView })}>
+                                <Card title="Bộ lọc sản phẩm">
+
+                                    <div className={cx('filter-section')}>
+
+                                        <h4>Tìm kiếm</h4>
+
+                                        <Search
+
+                                            placeholder="Tên sản phẩm..."
+
+                                            value={filters.search}
+                                            onChange={(e) => {
+
+                                                setFilters({ ...filters, search: e.target.value });
+
+                                                setPagination((prev) => ({ ...prev, current: 1 }));
+
+                                            }}
+
+                                            allowClear
+
+                                        />
+
+                                    </div>
+
+                            
+
+                                    <div className={cx('filter-section')}>
+
+                                        <h4>Khoảng giá</h4>
+
+                                        <Slider
+
+                                            range
+
+                                            min={0}
+
+                                            max={100000000}
+
+                                            step={1000000}
+
+                                            value={filters.priceRange}
+
+                                            onChange={(value) => {
+
+                                                setFilters({ ...filters, priceRange: value });
+
+                                                setPagination((prev) => ({ ...prev, current: 1 }));
+
+                                            }}
+
+                                            tooltip={{
+
+                                                formatter: (value) => `${value.toLocaleString('vi-VN')}đ`,
+
+                                            }}
+
+                                        />
+
+                                    </div>
+
+                            
+
+                                    <div className={cx('filter-section')}>
+
+                                        <h4>Sắp xếp</h4>
+
+                                        <Select
+
+                                            style={{ width: '100%' }}
+
+                                            options={sortOptions}
+
+                                            value={filters.sort}
+
+                                            onChange={(value) => {
+
+                                                setFilters({ ...filters, sort: value });
+
+                                                setPagination((prev) => ({ ...prev, current: 1 }));
+
+                                            }}
+
+                                        />
+
+                                    </div>
+
+                                </Card>
+
+                            
+
+                                <CategoryComponentFilter
+
+                                    onChange={handleComponentPartChange}
+
+                                    categoryId={id}
+
+                                    filters={availableFilters}
+
+                                    selectedIds={filters.componentIds}
+
                                 />
                             </div>
-
-                            <div className={cx('filter-section')}>
-                                <h4>Khoảng giá</h4>
-                                <Slider
-                                    range
-                                    min={0}
-                                    max={100000000}
-                                    step={1000000}
-                                    defaultValue={filters.priceRange}
-                                    onChange={(value) => {
-                                        setFilters({ ...filters, priceRange: value });
-                                        setPagination((prev) => ({ ...prev, current: 1 }));
-                                    }}
-                                    tooltip={{
-                                        formatter: (value) => `${value.toLocaleString('vi-VN')}đ`,
-                                    }}
-                                />
-                            </div>
-
-                            <div className={cx('filter-section')}>
-                                <h4>Sắp xếp</h4>
-                                <Select
-                                    style={{ width: '100%' }}
-                                    options={sortOptions}
-                                    defaultValue="newest"
-                                    onChange={(value) => {
-                                        setFilters({ ...filters, sort: value });
-                                        setPagination((prev) => ({ ...prev, current: 1 }));
-                                    }}
-                                />
-                            </div>
-                        </Card>
-
-                        <CategoryComponentFilter
-                            onChange={handleComponentPartChange}
-                            categoryId={id}
-                            filters={availableFilters}
-                            selectedIds={filters.componentIds}
-                        />
+                        </div>
                     </Col>
 
+
                     {/* Product list */}
-                    <Col span={18}>
+                    <Col xs={24} md={24} lg={18}>
                         {loading ? (
                             <div className={cx('loading')}>
                                 <Spin size="large" />
@@ -186,7 +270,7 @@ function Category() {
                             <>
                                 <Row gutter={[16, 16]}>
                                     {paginatedProducts.map((product) => (
-                                        <Col key={product.id} xs={24} sm={12} md={8} lg={6}>
+                                        <Col key={product.id} xs={12} sm={12} md={8} lg={6}>
                                             <CardBody product={product} />
                                         </Col>
                                     ))}

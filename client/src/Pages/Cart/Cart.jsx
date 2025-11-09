@@ -221,7 +221,9 @@ function Cart() {
 
             <main className={cx('main')}>
                 <div className={cx('container')}>
-                    <Table dataSource={localCartData} columns={columns} pagination={false} />
+                    <div className={cx('table-wrapper')}>
+                        <Table dataSource={localCartData} columns={columns} pagination={false} />
+                    </div>
                     {localCartData.length > 0 && (
                         <div className={cx('checkout-section')}>
                             <Card title="THÔNG TIN NGƯỜI MUA" style={{ marginBottom: 16 }}>

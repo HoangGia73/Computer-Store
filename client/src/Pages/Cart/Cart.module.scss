@@ -90,6 +90,23 @@
     }
 }
 
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 32px;
+    background-color: #fff;
+    border-radius: 12px;
+    padding-bottom: 6px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+
+    :global {
+        .ant-table {
+            min-width: 720px;
+            margin: 0;
+        }
+    }
+}
+
 .checkout-section {
     margin-top: 24px;
     display: grid;
@@ -192,5 +209,67 @@
                 }
             }
         }
+    }
+}
+
+@media (max-width: 1200px) {
+    .container {
+        width: 94%;
+    }
+}
+
+@media (max-width: 1024px) {
+    .checkout-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .main {
+        padding: 24px 16px;
+    }
+
+    .container {
+        width: 96%;
+    }
+
+    .table-wrapper {
+        :global {
+            .ant-table {
+                min-width: 640px;
+            }
+        }
+    }
+
+    .voucher-section {
+        flex-direction: column;
+
+        input {
+            width: 100%;
+        }
+    }
+
+    .total-section p {
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 576px) {
+    .table-wrapper {
+        :global {
+            .ant-table {
+                min-width: 520px;
+            }
+        }
+    }
+
+    .checkout-section {
+        gap: 16px;
+    }
+
+    .main {
+        padding: 20px 12px;
     }
 }

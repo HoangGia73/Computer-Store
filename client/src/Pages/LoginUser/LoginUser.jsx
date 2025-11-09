@@ -109,12 +109,14 @@ function LoginUser() {
                         </Button>
                     </Form.Item>
 
-                    <GoogleOAuthProvider clientId={import.meta.env.VITE_CLIENT_ID}>
-                        <GoogleLogin onSuccess={handleSuccess} onError={() => console.log("Login Failed")} />
-                    </GoogleOAuthProvider>
+                    <div className={cx("social-login")}>
+                        <GoogleOAuthProvider clientId={import.meta.env.VITE_CLIENT_ID}>
+                            <GoogleLogin onSuccess={handleSuccess} onError={() => console.log("Login Failed")} />
+                        </GoogleOAuthProvider>
+                    </div>
 
                     <div className={cx("form-footer")}>
-                        <Row justify="space-between" align="middle">
+                        <Row justify="space-between" align="middle" className={cx("footer-row")}>
                             <Col>
                                 <Link to="/forgot-password" className={cx("forgot-password")}>
                                     Quên mật khẩu?
