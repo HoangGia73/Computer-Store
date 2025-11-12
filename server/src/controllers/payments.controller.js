@@ -301,14 +301,33 @@ class PaymentsController {
 
     async getPayments(req, res) {
         const { id } = req.user;
-        const payments = await modelPayments.findAll({ where: { userId: id }, order: [['createdAt', 'DESC']] });
+        const payments = await modelPayments.findAll({
+            where: { userId: id },
+            order: [['createdAt', 'DESC']]
+        });
+
+        // ========== OPTIMIZATION: Batch fetch ==========
+        // Lấy tất cả unique productIds
+        const productIds = [...new Set(payments.map(p => p.productId))];
+
+        // Fetch tất cả products một lần (1 query thay vì N queries)
+        const products = await modelProducts.findAll({
+            where: { id: productIds }
+        });
+
+        // Tạo Map để lookup nhanh
+        const productMap = new Map(products.map(p => [p.id, p]));
+        // ===============================================
 
         // Tạo map để gom nhóm theo idPayment
         const paymentGroups = new Map();
 
         // Gom nhóm payments theo idPayment
         for (const payment of payments) {
-            const product = await modelProducts.findOne({ where: { id: payment.productId } });
+            const product = productMap.get(payment.productId);
+
+            // Skip nếu product không tồn tại
+            if (!product) continue;
 
             if (!paymentGroups.has(payment.idPayment)) {
                 paymentGroups.set(payment.idPayment, {
@@ -407,21 +426,34 @@ class PaymentsController {
                 order: [['createdAt', 'DESC']],
             });
 
+            // ========== OPTIMIZATION: Batch fetch thay vì N+1 queries ==========
+            // Lấy tất cả unique productIds và userIds
+            const productIds = [...new Set(orders.map(o => o.productId))];
+            const userIds = [...new Set(orders.map(o => o.userId))];
+
+            // Fetch tất cả products và users cùng lúc (2 queries thay vì N queries)
+            const [products, users] = await Promise.all([
+                modelProducts.findAll({ where: { id: productIds } }),
+                modelUsers.findAll({ where: { id: userIds } })
+            ]);
+
+            // Tạo Maps để lookup O(1) thay vì findOne mỗi lần
+            const productMap = new Map(products.map(p => [p.id, p]));
+            const userMap = new Map(users.map(u => [u.id, u]));
+            // ===================================================================
+
             // Gom nhóm đơn hàng theo idPayment
             const groupedOrders = {};
 
             // Xử lý và gom nhóm đơn hàng
             for (const order of orders) {
                 const orderData = order.get({ plain: true });
-                const product = await modelProducts.findOne({
-                    where: { id: orderData.productId },
-                });
+
+                // Lookup từ Map thay vì query database
+                const product = productMap.get(orderData.productId);
+                const user = userMap.get(orderData.userId);
 
                 if (!groupedOrders[orderData.idPayment]) {
-                    const user = await modelUsers.findOne({
-                        where: { id: orderData.userId },
-                    });
-
                     groupedOrders[orderData.idPayment] = {
                         id: orderData.id,
                         idPayment: orderData.idPayment,
