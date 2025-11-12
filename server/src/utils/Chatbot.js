@@ -2,37 +2,48 @@ const config = require('../config/env');
 const modelProduct = require('../models/products.model');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Initialize Gemini
 if (!config.GEMINI_API_KEY) {
     throw new Error('Missing GEMINI_API_KEY in environment');
 }
 
 const gemini = new GoogleGenerativeAI(config.GEMINI_API_KEY);
-const chatCompletionTemperature = parseFloat(config.CHATBOT_TEMPERATURE) || 0.7;
+const chatCompletionTemperature = Number(config.CHATBOT_TEMPERATURE) || 0.7;
 
-// Rate limiting: 60 requests/minute for free tier
+const MAX_REQUESTS_PER_MINUTE = Number(config.CHATBOT_REQUEST_LIMIT) || 58;
+const MAX_PRODUCTS_IN_CONTEXT = Number(config.CHATBOT_PRODUCTS_LIMIT) || 12;
+const PRODUCT_CACHE_TTL_MS = Number(config.CHATBOT_PRODUCT_CACHE_MS) || 60_000;
+const MIN_CONVERSATION_INTERVAL_MS = Number(config.CHATBOT_COOLDOWN_MS) || 4_000;
+
 const requestTimestamps = [];
-const MAX_REQUESTS_PER_MINUTE = 58; // Keep some buffer
+const conversationLocks = new Set();
+const conversationCooldowns = new Map();
 
-console.log('✅ Chatbot initialized with Google Gemini');
-console.log('📝 Model:', config.GEMINI_MODEL);
-console.log('⏱️  Rate limit:', MAX_REQUESTS_PER_MINUTE, 'requests/minute');
+function buildError(message, statusCode = 500) {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
+}
 
-// System prompt
 const DEFAULT_SYSTEM_PROMPT = [
     'Bạn là trợ lý bán hàng thân thiện và chính xác cho cửa hàng máy tính.',
-    'Yêu cầu:',
-    '1. Trả lời bằng tiếng Việt tự nhiên, sắc thái.',
-    '2. Nếu câu hỏi liên quan cấu hình hoặc so sánh, hãy giải thích ngắn gọn lý do đề xuất.',
-    '3. Nếu thông tin không có trong danh sách, hãy thông báo và gợi ý khách liên hệ tư vấn viên.',
-    '4. Khi liệt kê nhiều sản phẩm, hãy trình bày mỗi sản phẩm trên một dòng riêng, ưu tiên dạng gạch đầu dòng hoặc số thứ tự.',
-    '5. Bạn luôn cố gắng giúp khách chọn được sản phẩm phù hợp, nói chuyện tự nhiên như người thật, không quá dài dòng.',
-    '6. Luôn chào hỏi khách hàng một cách thân thiện trước khi trả lời câu hỏi.',
+    'Hướng dẫn:',
+    '1. Trả lời bằng tiếng Việt tự nhiên, ngắn gọn, ưu tiên giọng lịch sự.',
+    '2. Nếu câu hỏi liên quan cấu hình hoặc so sánh, giải thích ngắn gọn nhưng rõ ràng.',
+    '3. Nếu thông tin không có trong dữ liệu, thông báo cho khách và gợi ý liên hệ nhân viên.',
+    '4. Khi liệt kê nhiều sản phẩm, ưu tiên danh sách với dấu gạch đầu dòng.',
+    '5. Giữ giọng điệu gần gũi như nhân viên bán hàng thực thụ, không lan man.',
+    '6. Luôn chào hỏi khách trước khi trả lời.',
 ].join('\n');
 
 const chatSystemPrompt = (config.CHATBOT_SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT).split('\\n').join('\n');
+const allowedRoles = new Set(['system', 'user', 'assistant', 'model']);
 
 const currencyFormatter = new Intl.NumberFormat('vi-VN');
+
+let productCache = {
+    expiresAt: 0,
+    lines: [],
+};
 
 function formatPrice(value) {
     if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -45,8 +56,6 @@ function sanitizeHistory(history = []) {
     if (!Array.isArray(history)) {
         return [];
     }
-
-    const allowedRoles = new Set(['system', 'user', 'assistant', 'model']);
 
     return history
         .filter(
@@ -67,98 +76,145 @@ async function checkRateLimit() {
     const now = Date.now();
     const oneMinuteAgo = now - 60 * 1000;
 
-    // Remove timestamps older than 1 minute
-    while (requestTimestamps.length > 0 && requestTimestamps[0] < oneMinuteAgo) {
+    while (requestTimestamps.length && requestTimestamps[0] < oneMinuteAgo) {
         requestTimestamps.shift();
     }
 
-    // Check if we're at the limit
     if (requestTimestamps.length >= MAX_REQUESTS_PER_MINUTE) {
-        const oldestTimestamp = requestTimestamps[0];
-        const waitTime = Math.ceil((oldestTimestamp + 60 * 1000 - now) / 1000);
-        throw new Error(`Rate limit exceeded. Please wait ${waitTime} seconds before trying again.`);
+        const waitMs = requestTimestamps[0] + 60 * 1000 - now;
+        const waitTime = Math.max(1, Math.ceil(waitMs / 1000));
+        throw buildError(`Chatbot đang xử lý nhiều yêu cầu. Vui lòng đợi ${waitTime}s.`, 429);
     }
 
-    // Add current timestamp
     requestTimestamps.push(now);
 }
 
-async function askQuestion(question, history = []) {
-    if (!question || typeof question !== 'string' || !question.trim()) {
-        throw new Error('Missing question');
+async function getProductLines(limit = MAX_PRODUCTS_IN_CONTEXT) {
+    const now = Date.now();
+    if (productCache.lines.length && productCache.expiresAt > now) {
+        return productCache.lines.slice(0, limit);
     }
 
+    const products = await modelProduct.findAll();
+    const formatted = (Array.isArray(products) ? products : [])
+        .map((product, index) => {
+            const plain = typeof product?.toJSON === 'function' ? product.toJSON() : product;
+            const basePrice = Number(plain?.price) || 0;
+            const discount = Number(plain?.discount) || 0;
+            const finalPrice = discount > 0 ? basePrice - (basePrice * discount) / 100 : basePrice;
+            if (!plain?.name) {
+                return null;
+            }
+            return `- Sản phẩm ${index + 1}: ${plain.name} | Giá: ${formatPrice(finalPrice)} VND`;
+        })
+        .filter(Boolean);
+
+    productCache = {
+        lines: formatted,
+        expiresAt: now + PRODUCT_CACHE_TTL_MS,
+    };
+
+    return productCache.lines.slice(0, limit);
+}
+
+function normalizeAskOptions(input) {
+    if (!input) {
+        return { history: [], conversationId: undefined };
+    }
+
+    if (Array.isArray(input)) {
+        return { history: input, conversationId: undefined };
+    }
+
+    const history = Array.isArray(input.history) ? input.history : [];
+    return { history, conversationId: input.conversationId };
+}
+
+function ensureConversationFlow(conversationId) {
+    if (!conversationId) {
+        return;
+    }
+
+    if (conversationLocks.has(conversationId)) {
+        throw buildError('Chatbot đang trả lời câu hỏi trước. Vui lòng đợi trong giây lát.', 429);
+    }
+
+    if (MIN_CONVERSATION_INTERVAL_MS > 0) {
+        const now = Date.now();
+        const nextAllowed = conversationCooldowns.get(conversationId) || 0;
+        if (now < nextAllowed) {
+            const waitSeconds = Math.max(1, Math.ceil((nextAllowed - now) / 1000));
+            throw buildError(`Bạn đã hỏi quá nhanh. Vui lòng đợi ${waitSeconds}s trước khi hỏi tiếp.`, 429);
+        }
+    }
+
+    conversationLocks.add(conversationId);
+}
+
+function releaseConversationFlow(conversationId) {
+    if (!conversationId) {
+        return;
+    }
+    conversationLocks.delete(conversationId);
+    if (MIN_CONVERSATION_INTERVAL_MS > 0) {
+        conversationCooldowns.set(conversationId, Date.now() + MIN_CONVERSATION_INTERVAL_MS);
+    }
+}
+
+async function askQuestion(question, historyOrOptions = []) {
+    if (!question || typeof question !== 'string' || !question.trim()) {
+        throw buildError('Thiếu câu hỏi', 400);
+    }
+
+    const { history, conversationId } = normalizeAskOptions(historyOrOptions);
+    const sanitizedHistory = sanitizeHistory(history);
+
+    await checkRateLimit();
+    ensureConversationFlow(conversationId);
+
     try {
-        // Check rate limit before making API call
-        await checkRateLimit();
+        const products = await getProductLines();
+        const contextMessage = `Danh sách sản phẩm đang có:\n${
+            products.length ? products.join('\n') : '- Không có dữ liệu sản phẩm nào.'
+        }`;
 
-        console.log('📥 Fetching products from database...');
-        const products = await modelProduct.findAll();
-        console.log(`✅ Found ${products.length} products`);
-
-        const productData = products
-            .map((product, index) => {
-                const basePrice = Number(product.price) || 0;
-                const discount = Number(product.discount) || 0;
-                const finalPrice = discount > 0 ? basePrice - (basePrice * discount) / 100 : basePrice;
-
-                return `- Sản phẩm ${index + 1}: ${product.name} | Giá: ${formatPrice(finalPrice)} VND`;
-            })
-            .join('\n');
-
-        const sanitizedHistory = sanitizeHistory(history);
-        console.log(`📜 Sanitized history: ${sanitizedHistory.length} messages`);
-
-        const contextMessage = `Danh sách sản phẩm hiện có:\n${productData || '- Không có dữ liệu sản phẩm hiện tại.'}`;
-
-        // Gemini implementation
         const model = gemini.getGenerativeModel({ model: config.GEMINI_MODEL });
-
-        // Convert history to Gemini format (assistant -> model)
         const geminiHistory = sanitizedHistory.map((msg) => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
+            role: msg.role === 'assistant' ? 'model' : msg.role,
             parts: [{ text: msg.content }],
         }));
 
-        // Create chat with history
         const chat = model.startChat({
             history: geminiHistory,
             generationConfig: {
                 temperature: chatCompletionTemperature,
-                maxOutputTokens: 2048,
+                maxOutputTokens: 1024,
             },
         });
 
-        // Build prompt with system instruction and context
         const fullPrompt = `${chatSystemPrompt}\n\n${contextMessage}\n\nCâu hỏi của khách hàng: ${question.trim()}`;
-
-        console.log('🚀 Calling Google Gemini API...');
         const result = await chat.sendMessage(fullPrompt);
-        console.log('✅ Gemini response received');
-
-        const answer = result.response.text().trim();
+        const answer = result.response?.text()?.trim() || '';
 
         const updatedHistory = [
             ...sanitizedHistory,
             { role: 'user', content: question.trim() },
-            { role: 'assistant', content: answer },
+            { role: 'assistant', content: answer || 'Xin lỗi, tôi chưa có câu trả lời phù hợp.' },
         ].slice(-20);
 
         return { answer, history: updatedHistory };
     } catch (error) {
-        console.error('Chatbot askQuestion error:', error);
-
-        // Handle rate limit errors
-        if (error.status === 429 || error.message?.includes('quota')) {
-            throw new Error('Chatbot is temporarily unavailable due to high demand. Please try again in a few moments.');
-        }
-
-        // Handle rate limit check errors
-        if (error.message?.includes('Rate limit exceeded')) {
+        if (error?.statusCode) {
             throw error;
         }
-
-        throw error;
+        if (error.message?.includes('Rate limit') || error.status === 429) {
+            throw buildError('Chatbot tạm thời quá tải. Vui lòng thử lại sau vài giây.', 429);
+        }
+        const unexpected = buildError('Chatbot gặp sự cố bất ngờ. Vui lòng thử lại sau.', 500);
+        unexpected.cause = error;
+        throw unexpected;
+    } finally {
+        releaseConversationFlow(conversationId);
     }
 }
 

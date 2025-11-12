@@ -76,7 +76,10 @@ app.post('/api/chat', async (req, res) => {
         console.log('📜 Previous history length:', previousHistory.length);
 
         console.log('🤖 Calling askQuestion...');
-        const { answer, history } = await askQuestion(question, previousHistory);
+        const { answer, history } = await askQuestion(question, {
+            history: previousHistory,
+            conversationId: key,
+        });
         console.log('✅ Got answer, length:', answer?.length);
 
         conversationStore.set(key, history);
@@ -86,19 +89,23 @@ app.post('/api/chat', async (req, res) => {
         console.error('❌ Chat API error:', error);
         console.error('Error stack:', error.stack);
 
-        // Handle rate limit errors with specific message
-        if (error.message?.includes('Rate limit exceeded') ||
-            error.message?.includes('temporarily unavailable')) {
+        const isThrottleError =
+            error.statusCode === 429 ||
+            error.message?.includes('Rate limit exceeded') ||
+            error.message?.includes('temporarily unavailable');
+
+        if (isThrottleError) {
             return res.status(429).json({
                 success: false,
-                message: error.message
+                message: error.message,
             });
         }
 
-        return res.status(500).json({
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({
             success: false,
-            message: 'Lỗi server',
-            error: error.message
+            message: statusCode === 500 ? 'Lỗi server' : error.message,
+            error: error.message,
         });
     }
 });
