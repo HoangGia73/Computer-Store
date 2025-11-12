@@ -25,13 +25,13 @@ const { Header, Sider, Content } = Layout;
 const cx = classNames.bind(styles);
 
 const MENU_CONFIG = [
-    { key: 'home', icon: <HomeOutlined />, label: 'Trang chu' },
-    { key: 'products', icon: <ShoppingOutlined />, label: 'Quan ly san pham' },
-    { key: 'category', icon: <FileOutlined />, label: 'Quan ly danh muc' },
-    { key: 'order', icon: <ShoppingOutlined />, label: 'Quan ly don hang' },
-    { key: 'users', icon: <UserOutlined />, label: 'Quan ly nguoi dung' },
-    { key: 'blogs', icon: <FileOutlined />, label: 'Quan ly tin tuc' },
-    { key: 'contact', icon: <FileOutlined />, label: 'Quan ly lien he' },
+    { key: 'home', icon: <HomeOutlined />, label: 'Trang chủ' },
+    { key: 'products', icon: <ShoppingOutlined />, label: 'Quản lý sản phẩm' },
+    { key: 'category', icon: <FileOutlined />, label: 'Quản lý danh mục' },
+    { key: 'order', icon: <ShoppingOutlined />, label: 'Quản lý đơn hàng' },
+    { key: 'users', icon: <UserOutlined />, label: 'Quản lý người dùng' },
+    { key: 'blogs', icon: <FileOutlined />, label: 'Quản lý tin tức' },
+    { key: 'contact', icon: <FileOutlined />, label: 'Quản lý liên hệ' },
 ];
 
 const getAccessibleKeys = (position) => {

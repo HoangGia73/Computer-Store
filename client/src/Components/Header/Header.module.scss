@@ -6,7 +6,10 @@
     align-items: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     flex-direction: column;
-    padding: 12px 0;
+    padding: 12px 0 6px;
+    position: sticky;
+    top: 0;
+    z-index: 1000; // keeps the header above other sections
 }
 
 .cart-menu {
@@ -27,27 +30,32 @@
     z-index: 999;
     max-height: 300px;
     overflow-y: auto;
+
     li {
         list-style: none;
         display: flex;
         gap: 10px;
         padding-top: 10px;
+
         img {
             padding-left: 10px;
             width: 50px;
             height: 50px;
             object-fit: cover;
         }
+
         h3 {
             font-size: 14px;
             font-weight: 600;
         }
+
         p {
             font-size: 14px;
             color: #ec1c24;
             font-weight: 600;
             padding-top: 3px;
         }
+
         &:hover {
             background-color: #f0f0f0;
             cursor: pointer;
@@ -66,6 +74,7 @@
     padding: 6px 10px;
     border-radius: 999px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
     select {
         border: none;
         outline: none;
@@ -75,6 +84,7 @@
         min-width: 160px;
         background: transparent;
     }
+
     button {
         border: none;
         outline: none;
@@ -135,23 +145,28 @@
     gap: 12px;
     flex-wrap: wrap;
     align-items: center;
+
     a {
         text-decoration: none;
     }
+
     img {
         width: 30px;
         height: 30px;
     }
+
     .category-item {
         display: flex;
         align-items: center;
         gap: 10px;
         color: #fff;
+
         &:hover {
             transform: translateY(-5px);
             transition: all 0.3s ease;
             cursor: pointer;
         }
+
         span {
             font-size: 14px;
             font-weight: 600;
@@ -319,6 +334,7 @@
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+
     .user-avatar {
         display: flex;
         align-items: center;
@@ -508,36 +524,42 @@
 
 @media (max-width: 480px) {
     .mobile-quick-links {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
     }
 
     .quick-link {
-        width: 100%;
+        width: auto;
+        flex: 1 1 calc(50% - 8px);
     }
 
     .search-container {
         flex-direction: row;
         align-items: center;
-        padding: 10px;
-        gap: 8px;
+        padding: 6px 8px;
+        gap: 6px;
 
         select {
             flex: 0 0 36%;
             width: auto;
-            font-size: 14px;
+            font-size: 13px;
+            padding: 6px 8px;
+            border-radius: 10px;
         }
 
         input {
             flex: 1;
-            font-size: 14px;
+            font-size: 13px;
+            padding: 8px 10px;
+            border-radius: 10px;
         }
 
         button {
-            flex: 0 0 54px;
-            width: 54px;
-            height: 46px;
-            font-size: 16px;
-            border-radius: 12px;
+            flex: 0 0 46px;
+            width: 46px;
+            height: 40px;
+            font-size: 14px;
+            border-radius: 10px;
         }
     }
 

@@ -7,7 +7,7 @@ import Chatbot from './utils/Chatbot/Chatbot';
 function App() {
     return (
         <div>
-            <header>
+            <header className="app-header">
                 <Header />
             </header>
 

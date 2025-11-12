@@ -14,6 +14,13 @@
     font-family: 'Open Sans', sans-serif;
 }
 
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: #0090d0;
+}
+
 .main {
     width: 90%;
     margin: 0px auto;
