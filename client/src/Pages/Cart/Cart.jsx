@@ -222,7 +222,12 @@ function Cart() {
             <main className={cx('main')}>
                 <div className={cx('container')}>
                     <div className={cx('table-wrapper')}>
-                        <Table dataSource={localCartData} columns={columns} pagination={false} />
+                        <Table
+                            dataSource={localCartData}
+                            columns={columns}
+                            pagination={false}
+                            rowKey="id"
+                        />
                     </div>
                     {localCartData.length > 0 && (
                         <div className={cx('checkout-section')}>

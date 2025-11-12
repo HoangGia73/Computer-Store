@@ -179,7 +179,14 @@ function ManagerProduct() {
             })
             .catch((info) => {
                 console.log('Validate Failed:', info);
-                message.error(info?.response?.data.message);
+                // info is form validation error, not API response
+                const errorFields = info.errorFields || [];
+                if (errorFields.length > 0) {
+                    const firstError = errorFields[0];
+                    message.error(firstError.errors[0] || 'Vui lòng kiểm tra lại thông tin!');
+                } else {
+                    message.error('Vui lòng kiểm tra lại thông tin!');
+                }
             });
     };
 
@@ -315,11 +322,28 @@ function ManagerProduct() {
                             <Input />
                         </Form.Item>
 
-                        <Form.Item name="price" label="Giá" rules={[{ required: true, message: 'Vui lòng nhập giá!' }]}>
+                        <Form.Item
+                            name="price"
+                            label="Giá"
+                            rules={[
+                                { required: true, message: 'Vui lòng nhập giá!' },
+                                { type: 'number', message: 'Giá phải là số!' },
+                                {
+                                    validator: (_, value) => {
+                                        if (value && value > 0) {
+                                            return Promise.resolve();
+                                        }
+                                        return Promise.reject(new Error('Giá phải lớn hơn 0!'));
+                                    }
+                                }
+                            ]}
+                        >
                             <InputNumber
                                 style={{ width: '100%' }}
+                                min={1}
                                 formatter={(value) => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                                parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
+                                placeholder="Nhập giá sản phẩm"
                             />
                         </Form.Item>
 
