@@ -85,7 +85,21 @@ app.post('/api/chat', async (req, res) => {
     } catch (error) {
         console.error('❌ Chat API error:', error);
         console.error('Error stack:', error.stack);
-        return res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+
+        // Handle rate limit errors with specific message
+        if (error.message?.includes('Rate limit exceeded') ||
+            error.message?.includes('temporarily unavailable')) {
+            return res.status(429).json({
+                success: false,
+                message: error.message
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi server',
+            error: error.message
+        });
     }
 });
 

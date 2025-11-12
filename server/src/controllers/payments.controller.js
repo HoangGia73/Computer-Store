@@ -94,7 +94,7 @@ class PaymentsController {
             // Xóa giỏ hàng sau khi tạo đơn thành công
             await modelCart.destroy({ where: { userId: id } });
 
-            new OK({ message: 'Thanh toán thành công', metadata: paymentId }).send(res);
+            return new OK({ message: 'Thanh toán thành công', metadata: paymentId }).send(res);
         }
 
         // ===== PHƯƠNG THỨC 2: THANH TOÁN QUA PAYPAL =====
@@ -135,7 +135,7 @@ class PaymentsController {
                 // Lấy URL để redirect user đến trang thanh toán PayPal
                 const approvalUrl = order.result.links.find((link) => link.rel === 'approve').href;
 
-                new OK({
+                return new OK({
                     message: 'Đã tạo đơn hàng PayPal',
                     metadata: {
                         orderId: order.result.id,
@@ -149,6 +149,7 @@ class PaymentsController {
             }
         }
 
+        // ===== PHƯƠNG THỨC 3: THANH TOÁN QUA VNPAY =====
         if (typePayment === 'VNPAY') {
             const vnpay = new VNPay({
                 tmnCode: vnpTmnCode,
@@ -171,9 +172,10 @@ class PaymentsController {
                 vnp_CreateDate: dateFormat(new Date()), // tùy chọn, mặc định là hiện tại
                 vnp_ExpireDate: dateFormat(tomorrow), // tùy chọn
             });
-            new OK({ message: 'Thanh toán thông báo', metadata: vnpayResponse }).send(res);
+            return new OK({ message: 'Thanh toán thông báo', metadata: vnpayResponse }).send(res);
         }
 
+        // Nếu không match phương thức thanh toán nào
         throw new BadRequestError('Phương thức thanh toán không hợp lệ');
     }
 

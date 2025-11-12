@@ -10,8 +10,13 @@ if (!config.GEMINI_API_KEY) {
 const gemini = new GoogleGenerativeAI(config.GEMINI_API_KEY);
 const chatCompletionTemperature = parseFloat(config.CHATBOT_TEMPERATURE) || 0.7;
 
+// Rate limiting: 60 requests/minute for free tier
+const requestTimestamps = [];
+const MAX_REQUESTS_PER_MINUTE = 58; // Keep some buffer
+
 console.log('✅ Chatbot initialized with Google Gemini');
 console.log('📝 Model:', config.GEMINI_MODEL);
+console.log('⏱️  Rate limit:', MAX_REQUESTS_PER_MINUTE, 'requests/minute');
 
 // System prompt
 const DEFAULT_SYSTEM_PROMPT = [
@@ -58,14 +63,37 @@ function sanitizeHistory(history = []) {
         .slice(-20);
 }
 
+async function checkRateLimit() {
+    const now = Date.now();
+    const oneMinuteAgo = now - 60 * 1000;
+
+    // Remove timestamps older than 1 minute
+    while (requestTimestamps.length > 0 && requestTimestamps[0] < oneMinuteAgo) {
+        requestTimestamps.shift();
+    }
+
+    // Check if we're at the limit
+    if (requestTimestamps.length >= MAX_REQUESTS_PER_MINUTE) {
+        const oldestTimestamp = requestTimestamps[0];
+        const waitTime = Math.ceil((oldestTimestamp + 60 * 1000 - now) / 1000);
+        throw new Error(`Rate limit exceeded. Please wait ${waitTime} seconds before trying again.`);
+    }
+
+    // Add current timestamp
+    requestTimestamps.push(now);
+}
+
 async function askQuestion(question, history = []) {
     if (!question || typeof question !== 'string' || !question.trim()) {
         throw new Error('Missing question');
     }
 
     try {
-        console.log('🤖 Chatbot: Fetching products from database...');
-        const products = await modelProduct.findAll({});
+        // Check rate limit before making API call
+        await checkRateLimit();
+
+        console.log('📥 Fetching products from database...');
+        const products = await modelProduct.findAll();
         console.log(`✅ Found ${products.length} products`);
 
         const productData = products
@@ -119,6 +147,17 @@ async function askQuestion(question, history = []) {
         return { answer, history: updatedHistory };
     } catch (error) {
         console.error('Chatbot askQuestion error:', error);
+
+        // Handle rate limit errors
+        if (error.status === 429 || error.message?.includes('quota')) {
+            throw new Error('Chatbot is temporarily unavailable due to high demand. Please try again in a few moments.');
+        }
+
+        // Handle rate limit check errors
+        if (error.message?.includes('Rate limit exceeded')) {
+            throw error;
+        }
+
         throw error;
     }
 }

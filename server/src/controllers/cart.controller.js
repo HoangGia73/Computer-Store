@@ -79,13 +79,17 @@ class controllerCart {
             where: { userId: id },
         });
 
-        const data = await Promise.all(
+        // Map through cart items and fetch product details
+        const cartWithProducts = await Promise.all(
             cart.map(async (item) => {
+                // Try to find product in regular products table
                 let product = await modelProduct.findOne({
                     where: { id: item.productId },
                 });
 
                 let isComponent = false;
+
+                // If not found, check in components table
                 if (!product) {
                     product = await modelProductComponent.findOne({
                         where: { id: item.productId },
@@ -93,12 +97,17 @@ class controllerCart {
                     isComponent = true;
                 }
 
+                // If product doesn't exist (deleted/out of stock), clean up cart
                 if (!product) {
-                    throw new BadRequestError('Không tìm thấy sản phẩm');
+                    await modelCart.destroy({ where: { id: item.id } });
+                    return null; // Will be filtered out
                 }
 
+                // Calculate final price with discount
                 const finalPrice =
-                    !isComponent && product.discount > 0 ? product.price * (1 - product.discount / 100) : product.price;
+                    !isComponent && product.discount > 0
+                        ? product.price * (1 - product.discount / 100)
+                        : product.price;
 
                 return {
                     id: item.id,
@@ -113,7 +122,10 @@ class controllerCart {
             }),
         );
 
-        new OK({ message: 'Lấy giỏ hàng thành công', metadata: data }).send(res);
+        // Filter out null values (products that were deleted)
+        const validCart = cartWithProducts.filter(item => item !== null);
+
+        new OK({ message: 'Lấy giỏ hàng thành công', metadata: validCart }).send(res);
     }
 
     async deleteCart(req, res) {
