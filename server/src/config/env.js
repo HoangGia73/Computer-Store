@@ -45,9 +45,12 @@ module.exports = {
     PAYPAL_CLIENT_SECRET: requireEnv('PAYPAL_CLIENT_SECRET'),
     PAYPAL_MODE: process.env.PAYPAL_MODE || 'sandbox',
 
-    // Chatbot - Gemini only
-    GEMINI_API_KEY: requireEnv('GEMINI_API_KEY'),
-    GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    // Chatbot - OpenRouter
+    OPENROUTER_API_KEY: requireEnv('OPENROUTER_API_KEY'),
+    OPENROUTER_MODEL: process.env.OPENROUTER_MODEL || 'mistralai/mistral-small-3.1-24b-instruct:free',
+    OPENROUTER_BASE_URL: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+    OPENROUTER_HTTP_REFERER: requireEnv('OPENROUTER_HTTP_REFERER'),
+    OPENROUTER_APP_TITLE: requireEnv('OPENROUTER_APP_TITLE'),
     CHATBOT_TEMPERATURE: process.env.CHATBOT_TEMPERATURE || '0.7',
     CHATBOT_SYSTEM_PROMPT: process.env.CHATBOT_SYSTEM_PROMPT || '',
 

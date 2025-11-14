@@ -1,221 +1,169 @@
-const config = require('../config/env');
+const axios = require('axios');
 const modelProduct = require('../models/products.model');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const config = require('../config/env');
 
-if (!config.GEMINI_API_KEY) {
-    throw new Error('Missing GEMINI_API_KEY in environment');
+if (!config.OPENROUTER_API_KEY) {
+    throw new Error('Missing OPENROUTER_API_KEY in environment');
 }
 
-const gemini = new GoogleGenerativeAI(config.GEMINI_API_KEY);
-const chatCompletionTemperature = Number(config.CHATBOT_TEMPERATURE) || 0.7;
+const CHATBOT_TEMPERATURE = Number(config.CHATBOT_TEMPERATURE) || 0.7;
+const MAX_PRODUCTS_IN_CONTEXT = Number(config.CHATBOT_PRODUCTS_LIMIT) || 15;
+const PRODUCT_CACHE_TTL_MS = Number(config.CHATBOT_PRODUCT_CACHE_MS) || 2 * 60 * 1000;
 
-const MAX_REQUESTS_PER_MINUTE = Number(config.CHATBOT_REQUEST_LIMIT) || 58;
-const MAX_PRODUCTS_IN_CONTEXT = Number(config.CHATBOT_PRODUCTS_LIMIT) || 12;
-const PRODUCT_CACHE_TTL_MS = Number(config.CHATBOT_PRODUCT_CACHE_MS) || 60_000;
-const MIN_CONVERSATION_INTERVAL_MS = Number(config.CHATBOT_COOLDOWN_MS) || 4_000;
-
-const requestTimestamps = [];
-const conversationLocks = new Set();
-const conversationCooldowns = new Map();
-
-function buildError(message, statusCode = 500) {
-    const error = new Error(message);
-    error.statusCode = statusCode;
-    return error;
-}
-
-const DEFAULT_SYSTEM_PROMPT = [
-    'Bạn là trợ lý bán hàng thân thiện và chính xác cho cửa hàng máy tính.',
-    'Hướng dẫn:',
-    '1. Trả lời bằng tiếng Việt tự nhiên, ngắn gọn, ưu tiên giọng lịch sự.',
-    '2. Nếu câu hỏi liên quan cấu hình hoặc so sánh, giải thích ngắn gọn nhưng rõ ràng.',
-    '3. Nếu thông tin không có trong dữ liệu, thông báo cho khách và gợi ý liên hệ nhân viên.',
-    '4. Khi liệt kê nhiều sản phẩm, ưu tiên danh sách với dấu gạch đầu dòng.',
-    '5. Giữ giọng điệu gần gũi như nhân viên bán hàng thực thụ, không lan man.',
-    '6. Luôn chào hỏi khách trước khi trả lời.',
-].join('\n');
-
-const chatSystemPrompt = (config.CHATBOT_SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT).split('\\n').join('\n');
-const allowedRoles = new Set(['system', 'user', 'assistant', 'model']);
-
-const currencyFormatter = new Intl.NumberFormat('vi-VN');
+const DEFAULT_SYSTEM_PROMPT = (config.CHATBOT_SYSTEM_PROMPT || `
+Ban la mot tro ly ban hang chuyen nghiep cua cua hang PC.
+- Tra loi bang tieng Viet tu nhien, than thien, mach lac.
+- Su dung du lieu san pham duoc cung cap de tu van; neu thieu thong tin hay thanh that va goi y khach bo sung thong tin lien he.
+- Khi gioi thieu nhieu san pham, trinh bay dang danh sach gach dau dong, neu ten, gia va diem noi bat.
+- Luon uu tien dua ra goi y cu the, phu hop voi nhu cau trong cau hoi.
+`).trim();
 
 let productCache = {
     expiresAt: 0,
     lines: [],
 };
 
-function formatPrice(value) {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-        return value;
+function toPlainProduct(product) {
+    if (!product) {
+        return null;
     }
-    return currencyFormatter.format(value);
+    return typeof product.toJSON === 'function' ? product.toJSON() : product;
 }
 
-function sanitizeHistory(history = []) {
-    if (!Array.isArray(history)) {
-        return [];
+function formatProductLine(product, index) {
+    const plain = toPlainProduct(product);
+    if (!plain?.name) {
+        return null;
     }
 
-    return history
-        .filter(
-            (msg) =>
-                msg &&
-                typeof msg.role === 'string' &&
-                typeof msg.content === 'string' &&
-                msg.content.trim().length > 0,
-        )
-        .map((msg) => ({
-            role: allowedRoles.has(msg.role) ? msg.role : 'user',
-            content: msg.content.trim(),
-        }))
-        .slice(-20);
+    const basePrice = Number(plain.price) || 0;
+    const discount = Number(plain.discount) || 0;
+    const finalPrice = discount > 0 ? basePrice - (basePrice * discount) / 100 : basePrice;
+    const formattedPrice = finalPrice.toLocaleString('vi-VN');
+    const discountNote = discount > 0 ? ` (giam ${discount}%)` : '';
+    return `${index + 1}. ${plain.name} - ${formattedPrice} VND${discountNote}`;
 }
 
-async function checkRateLimit() {
-    const now = Date.now();
-    const oneMinuteAgo = now - 60 * 1000;
-
-    while (requestTimestamps.length && requestTimestamps[0] < oneMinuteAgo) {
-        requestTimestamps.shift();
-    }
-
-    if (requestTimestamps.length >= MAX_REQUESTS_PER_MINUTE) {
-        const waitMs = requestTimestamps[0] + 60 * 1000 - now;
-        const waitTime = Math.max(1, Math.ceil(waitMs / 1000));
-        throw buildError(`Chatbot đang xử lý nhiều yêu cầu. Vui lòng đợi ${waitTime}s.`, 429);
-    }
-
-    requestTimestamps.push(now);
-}
-
-async function getProductLines(limit = MAX_PRODUCTS_IN_CONTEXT) {
+async function getProductLines() {
     const now = Date.now();
     if (productCache.lines.length && productCache.expiresAt > now) {
-        return productCache.lines.slice(0, limit);
+        return productCache.lines;
     }
 
     const products = await modelProduct.findAll();
-    const formatted = (Array.isArray(products) ? products : [])
-        .map((product, index) => {
-            const plain = typeof product?.toJSON === 'function' ? product.toJSON() : product;
-            const basePrice = Number(plain?.price) || 0;
-            const discount = Number(plain?.discount) || 0;
-            const finalPrice = discount > 0 ? basePrice - (basePrice * discount) / 100 : basePrice;
-            if (!plain?.name) {
-                return null;
-            }
-            return `- Sản phẩm ${index + 1}: ${plain.name} | Giá: ${formatPrice(finalPrice)} VND`;
-        })
-        .filter(Boolean);
+    const lines = (Array.isArray(products) ? products : [])
+        .map((product, idx) => formatProductLine(product, idx))
+        .filter(Boolean)
+        .slice(0, MAX_PRODUCTS_IN_CONTEXT);
 
     productCache = {
-        lines: formatted,
+        lines,
         expiresAt: now + PRODUCT_CACHE_TTL_MS,
     };
 
-    return productCache.lines.slice(0, limit);
+    return lines;
 }
 
-function normalizeAskOptions(input) {
-    if (!input) {
-        return { history: [], conversationId: undefined };
-    }
+function buildPrompt(question, productLines) {
+    const productSection = productLines.length
+        ? `Danh sach san pham hien co:\n${productLines.join('\n')}`
+        : 'Hien chua co du lieu san pham. Hay tra loi dua tren kinh nghiem chung va goi y lien he cua hang.';
 
-    if (Array.isArray(input)) {
-        return { history: input, conversationId: undefined };
-    }
+    return `
+${productSection}
 
-    const history = Array.isArray(input.history) ? input.history : [];
-    return { history, conversationId: input.conversationId };
+Cau hoi cua khach hang: ${question}
+
+Hay tra loi ngan gon (3-6 cau), nhan manh loi ich chinh va de xuat ro rang.
+    `.trim();
 }
 
-function ensureConversationFlow(conversationId) {
-    if (!conversationId) {
-        return;
+function buildFallbackAnswer(productLines) {
+    if (!productLines.length) {
+        return 'Xin loi, toi dang gap su co khi truy van du lieu. Ban vui long thu lai sau hoac lien he truc tiep voi cua hang nhe.';
     }
 
-    if (conversationLocks.has(conversationId)) {
-        throw buildError('Chatbot đang trả lời câu hỏi trước. Vui lòng đợi trong giây lát.', 429);
-    }
-
-    if (MIN_CONVERSATION_INTERVAL_MS > 0) {
-        const now = Date.now();
-        const nextAllowed = conversationCooldowns.get(conversationId) || 0;
-        if (now < nextAllowed) {
-            const waitSeconds = Math.max(1, Math.ceil((nextAllowed - now) / 1000));
-            throw buildError(`Bạn đã hỏi quá nhanh. Vui lòng đợi ${waitSeconds}s trước khi hỏi tiếp.`, 429);
-        }
-    }
-
-    conversationLocks.add(conversationId);
+    return [
+        'Toi tam thoi khong the ket noi toi he thong tra loi tu dong.',
+        'Ban co the tham khao nhanh mot vai san pham noi bat:',
+        productLines.slice(0, 3).join('\n'),
+        'Neu can tu van them, ban hay gui lai cau hoi sau it phut hoac lien he hotline de duoc ho tro ngay.',
+    ].join('\n\n');
 }
 
-function releaseConversationFlow(conversationId) {
-    if (!conversationId) {
-        return;
+async function sendPromptToOpenRouter(prompt) {
+    const baseUrl = (config.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+    const url = `${baseUrl}/chat/completions`;
+
+    const response = await axios.post(url, {
+        model: config.OPENROUTER_MODEL,
+        temperature: CHATBOT_TEMPERATURE,
+        messages: [
+            { role: 'system', content: DEFAULT_SYSTEM_PROMPT },
+            { role: 'user', content: prompt },
+        ],
+    }, {
+        headers: {
+            Authorization: `Bearer ${config.OPENROUTER_API_KEY}`,
+            'HTTP-Referer': config.OPENROUTER_HTTP_REFERER,
+            'X-Title': config.OPENROUTER_APP_TITLE,
+            'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+    });
+
+    const choice = response.data?.choices?.[0];
+    if (!choice?.message?.content) {
+        throw new Error('OpenRouter response missing content');
     }
-    conversationLocks.delete(conversationId);
-    if (MIN_CONVERSATION_INTERVAL_MS > 0) {
-        conversationCooldowns.set(conversationId, Date.now() + MIN_CONVERSATION_INTERVAL_MS);
+
+    const { content } = choice.message;
+    if (typeof content === 'string') {
+        return content.trim();
     }
+
+    if (Array.isArray(content)) {
+        return content
+            .map((part) => {
+                if (!part) {
+                    return '';
+                }
+                if (typeof part === 'string') {
+                    return part;
+                }
+                if (typeof part.text === 'string') {
+                    return part.text;
+                }
+                return '';
+            })
+            .join('')
+            .trim();
+    }
+
+    return '';
 }
 
-async function askQuestion(question, historyOrOptions = []) {
+async function askQuestion(question) {
     if (!question || typeof question !== 'string' || !question.trim()) {
-        throw buildError('Thiếu câu hỏi', 400);
+        throw new Error('Missing question');
     }
 
-    const { history, conversationId } = normalizeAskOptions(historyOrOptions);
-    const sanitizedHistory = sanitizeHistory(history);
-
-    await checkRateLimit();
-    ensureConversationFlow(conversationId);
+    const trimmedQuestion = question.trim();
 
     try {
-        const products = await getProductLines();
-        const contextMessage = `Danh sách sản phẩm đang có:\n${
-            products.length ? products.join('\n') : '- Không có dữ liệu sản phẩm nào.'
-        }`;
+        const productLines = await getProductLines();
+        const prompt = buildPrompt(trimmedQuestion, productLines);
 
-        const model = gemini.getGenerativeModel({ model: config.GEMINI_MODEL });
-        const geminiHistory = sanitizedHistory.map((msg) => ({
-            role: msg.role === 'assistant' ? 'model' : msg.role,
-            parts: [{ text: msg.content }],
-        }));
-
-        const chat = model.startChat({
-            history: geminiHistory,
-            generationConfig: {
-                temperature: chatCompletionTemperature,
-                maxOutputTokens: 1024,
-            },
-        });
-
-        const fullPrompt = `${chatSystemPrompt}\n\n${contextMessage}\n\nCâu hỏi của khách hàng: ${question.trim()}`;
-        const result = await chat.sendMessage(fullPrompt);
-        const answer = result.response?.text()?.trim() || '';
-
-        const updatedHistory = [
-            ...sanitizedHistory,
-            { role: 'user', content: question.trim() },
-            { role: 'assistant', content: answer || 'Xin lỗi, tôi chưa có câu trả lời phù hợp.' },
-        ].slice(-20);
-
-        return { answer, history: updatedHistory };
+        const answer = await sendPromptToOpenRouter(prompt);
+        return answer && answer.length
+            ? answer
+            : buildFallbackAnswer(productLines);
     } catch (error) {
-        if (error?.statusCode) {
-            throw error;
-        }
-        if (error.message?.includes('Rate limit') || error.status === 429) {
-            throw buildError('Chatbot tạm thời quá tải. Vui lòng thử lại sau vài giây.', 429);
-        }
-        const unexpected = buildError('Chatbot gặp sự cố bất ngờ. Vui lòng thử lại sau.', 500);
-        unexpected.cause = error;
-        throw unexpected;
-    } finally {
-        releaseConversationFlow(conversationId);
+        console.error('Chatbot askQuestion error:', error);
+        const productLines = productCache.lines || [];
+        return buildFallbackAnswer(productLines);
     }
 }
 
 module.exports = { askQuestion };
+

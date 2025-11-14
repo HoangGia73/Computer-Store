@@ -46,7 +46,6 @@ connectDB();
 syncDatabase();
 
 // === CHATBOT API ===
-const conversationStore = new Map();
 
 app.post('/api/chat', async (req, res) => {
     try {
@@ -59,6 +58,7 @@ app.post('/api/chat', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Câu hỏi không hợp lệ.' });
         }
 
+        const normalizedQuestion = question.trim();
         let key = conversationId || req.cookies.conversationId;
 
         if (!key) {
@@ -72,17 +72,9 @@ app.post('/api/chat', async (req, res) => {
 
         console.log('🔑 Conversation ID:', key);
 
-        const previousHistory = conversationStore.get(key) || [];
-        console.log('📜 Previous history length:', previousHistory.length);
-
         console.log('🤖 Calling askQuestion...');
-        const { answer, history } = await askQuestion(question, {
-            history: previousHistory,
-            conversationId: key,
-        });
+        const answer = await askQuestion(normalizedQuestion);
         console.log('✅ Got answer, length:', answer?.length);
-
-        conversationStore.set(key, history);
 
         return res.status(200).json({ answer, conversationId: key });
     } catch (error) {
